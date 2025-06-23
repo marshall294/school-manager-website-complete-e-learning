@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f4f6;
+      margin: 0;
+      padding: 20px;
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    .info-box {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+    .card {
+      flex: 1 1 22%;
+      background: #e2e8f0;
+      margin: 10px;
+      padding: 2px;
+      border-radius: 6px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .card h3 {
+      margin: 0;
+      font-size: 1.5em;
+      color: #1e293b;
+    }
+    .card span {
+      font-size: 1.2em;
+      color: #475569;
+    }
+  </style>
+</head>
+<body>
+  <div class="info-box" id="infoBox">
+    <!-- Dynamic cards will appear here -->
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+      authDomain: "school-6425b.firebaseapp.com",
+      databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+      projectId: "school-6425b",
+      storageBucket: "school-6425b.appspot.com",
+      messagingSenderId: "929265479935",
+      appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
+
+    function createCard(title, value) {
+      return `<div class="card"><h3>${value}</h3><span>${title}</span></div>`;
+    }
+
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        alert("Please login");
+        window.location.href = "login.html";
+        return;
+      }
+
+      db.ref("users/" + user.uid).once("value").then(snapshot => {
+        const currentUser = snapshot.val();
+        const role = currentUser.role;
+        const infoBox = document.getElementById("infoBox");
+
+        db.ref("users").once("value").then(snap => {
+          const users = snap.val();
+          let studentCount = 0, teacherCount = 0, adminCount = 0, classStudentCount = 0;
+
+          for (const key in users) {
+            const u = users[key];
+            if (u.role === "student") studentCount++;
+            if (u.role === "teacher") teacherCount++;
+            if (u.role === "admin" || u.role === "super-admin") adminCount++;
+            if (u.role === "student" && u.class === currentUser.class) classStudentCount++;
+          }
+
+          let html = "";
+          if (role === "super-admin" || role === "admin") {
+            html += createCard("Total Students", studentCount);
+            html += createCard("Total Teachers", teacherCount);
+            html += createCard("Total Admins", adminCount);
+          } else if (role === "hod" || role === "hos") {
+            html += createCard("Total Students", studentCount);
+            html += createCard("Total Teachers", teacherCount);
+          } else if (role === "teacher") {
+            html += createCard("Students in Class", classStudentCount);
+          } else if (role === "student") {
+            loadStudentAttendance(user.uid, currentUser.class);
+            return;
+          }
+
+          infoBox.innerHTML = html;
+        });
+      });
+    });
+
+    function loadStudentAttendance(uid, studentClass) {
+      db.ref(`attendance/${studentClass}/dates`).once("value").then(snap => {
+        const dates = snap.val() || {};
+        let present = 0, absent = 0;
+
+        for (const date in dates) {
+          const dayRecord = dates[date];
+          if (dayRecord[uid] === "present") present++;
+          else if (dayRecord[uid] === "absent") absent++;
+        }
+
+        const total = present + absent;
+        const percent = total > 0 ? Math.round((present / total) * 100) : 0;
+        document.getElementById("infoBox").innerHTML = createCard("Attendance %", percent + "%");
+      });
+    }
+  </script>
+</body>
+</html>
