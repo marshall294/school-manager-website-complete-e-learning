@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>My Students</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f5f5f5;
+    }
+    header {
+      background: #004080;
+      color: white;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header img {
+      height: 40px;
+    }
+    nav a {
+      margin-left: 15px;
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    h2 {
+      margin: 20px;
+    }
+    .filters {
+      margin: 0 20px;
+      display: flex;
+      gap: 10px;
+    }
+    select {
+      padding: 5px;
+    }
+    table {
+      width: 95%;
+      margin: 20px auto;
+      border-collapse: collapse;
+      background: white;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+    }
+    th {
+      background: #eee;
+    }
+    img.profile {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <img src="logo.png" alt="School Logo">
+    </div>
+    <nav>
+      <a href="attendance.html">Attendance</a>
+      <a href="resultsheet.html">Result Sheet</a>
+      <a href="comments.html">Comments</a>
+    </nav>
+  </header>
+
+  <h2>My Students</h2>
+
+  <div class="filters">
+    <select id="filterYear" onchange="loadStudents()">
+      <option value="">Select Year</option>
+      <option>2024–2025</option>
+      <option>2025–2026</option>
+      <option>2026–2027</option>
+    </select>
+    <select id="filterTerm" onchange="loadStudents()">
+      <option value="">Select Term</option>
+      <option>First</option>
+      <option>Second</option>
+      <option>Third</option>
+    </select>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Photo</th>
+        <th>Name</th>
+        <th>Class</th>
+        <th>Email</th>
+        <th>Sex</th>
+        <th>DOB</th>
+        <th>Year</th>
+        <th>Term</th>
+        <th>Score</th>
+      </tr>
+    </thead>
+    <tbody id="studentsTable"></tbody>
+  </table>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+      authDomain: "school-6425b.firebaseapp.com",
+      databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+      projectId: "school-6425b",
+      storageBucket: "school-6425b.appspot.com",
+      messagingSenderId: "929265479935",
+      appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    const db = firebase.database();
+    const auth = firebase.auth();
+
+    let teacherClass = null;
+    let pictures = {};
+
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        alert("Not logged in");
+        window.location.href = "login.html";
+        return;
+      }
+
+      db.ref("users/" + user.uid).once("value").then(snap => {
+        const currentUser = snap.val();
+        if (currentUser.role !== "teacher") {
+          alert("Access denied. Teachers only.");
+          return;
+        }
+
+        teacherClass = currentUser.class;
+
+        // Load pictures first
+        db.ref("pictures").once("value").then(picSnap => {
+          pictures = picSnap.val() || {};
+          loadStudents();
+        });
+      });
+    });
+
+    function loadStudents() {
+      const filterYear = document.getElementById("filterYear").value;
+      const filterTerm = document.getElementById("filterTerm").value;
+      const table = document.getElementById("studentsTable");
+      table.innerHTML = "";
+
+      db.ref("users").once("value").then(snap => {
+        const users = snap.val() || {};
+
+        Object.entries(users).forEach(([uid, user]) => {
+          if (user.role === "student" && user.class === teacherClass) {
+            if ((filterYear && user.year !== filterYear) ||
+                (filterTerm && user.term !== filterTerm)) return;
+
+            const photoURL = pictures[uid]?.url || "https://via.placeholder.com/50";
+            const score = user.score || "-";
+
+            const row = `<tr>
+              <td><img src="${photoURL}" class="profile" /></td>
+              <td>${user.name}</td>
+              <td>${user.class}</td>
+              <td>${user.email}</td>
+              <td>${user.sex || "-"}</td>
+              <td>${user.dob || "-"}</td>
+              <td>${user.year || "-"}</td>
+              <td>${user.term || "-"}</td>
+              <td>${score}</td>
+            </tr>`;
+            table.innerHTML += row;
+          }
+        });
+      });
+    }
+  </script>
+
+</body>
+</html>

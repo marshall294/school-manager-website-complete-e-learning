@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Take Theory Assessment</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background: #f0f8ff;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      padding: 1rem;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #003366;
+      margin-bottom: 1rem;
+    }
+    select, input, button {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    iframe {
+      width: 100%;
+      height: 450px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-top: 1rem;
+    }
+    @media (max-width: 600px) {
+      iframe { height: 350px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Take Theory Assessment</h2>
+    <input type="text" id="studentName" readonly />
+    <select id="studentClass" disabled></select>
+    <select id="filterYear"></select>
+    <select id="filterTerm"></select>
+    <select id="subjectSelect"></select>
+    <select id="typeSelect"></select>
+    <button onclick="startAssessment()">Start Assessment</button>
+
+    <div id="assessmentContainer" style="display:none">
+      <p><a id="assessmentLink" href="#" target="_blank">Open in New Tab</a></p>
+      <iframe id="assessmentIframe" src="" allowfullscreen></iframe>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+      authDomain: "school-6425b.firebaseapp.com",
+      databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+      projectId: "school-6425b",
+      storageBucket: "school-6425b.appspot.com",
+      messagingSenderId: "929265479935",
+      appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
+
+    let studentName = "";
+    let studentClass = "";
+    let allDocs = [];
+
+    auth.onAuthStateChanged(user => {
+      if (!user) return location.href = 'login.html';
+      db.ref(`users/${user.uid}`).once('value').then(snap => {
+        const data = snap.val();
+        if (!data || data.role !== 'student') return alert('Unauthorized'), location.href = 'dashboard.html';
+        studentName = data.name;
+        studentClass = data.class;
+        document.getElementById("studentName").value = studentName;
+        const classSelect = document.getElementById("studentClass");
+        classSelect.innerHTML = `<option>${studentClass}</option>`;
+        classSelect.disabled = true;
+        loadAllTheoryDocs();
+      });
+    });
+
+    function loadAllTheoryDocs() {
+      db.ref("docAssessments").once("value").then(snap => {
+        allDocs = [];
+        snap.forEach(child => {
+          const item = child.val();
+          if (item.published && item.class === studentClass) {
+            allDocs.push(item);
+          }
+        });
+        updateDropdowns();
+      });
+    }
+
+    function updateDropdowns() {
+      const years = Array.from(new Set(allDocs.map(d => d.year)));
+      populateDropdown("filterYear", years);
+
+      document.getElementById("filterYear").onchange = () => {
+        const selectedYear = filterYear.value;
+        const filtered = allDocs.filter(d => d.year === selectedYear);
+        const terms = Array.from(new Set(filtered.map(d => d.term)));
+        populateDropdown("filterTerm", terms);
+        clearDropdowns(["subjectSelect", "typeSelect"]);
+      };
+
+      document.getElementById("filterTerm").onchange = () => {
+        const filtered = allDocs.filter(d => d.year === filterYear.value && d.term === filterTerm.value);
+        const subs = Array.from(new Set(filtered.map(d => d.subject)));
+        populateDropdown("subjectSelect", subs);
+        clearDropdowns(["typeSelect"]);
+      };
+
+      document.getElementById("subjectSelect").onchange = () => {
+        const filtered = allDocs.filter(d => d.year === filterYear.value && d.term === filterTerm.value && d.subject === subjectSelect.value);
+        const types = Array.from(new Set(filtered.map(d => d.type)));
+        populateDropdown("typeSelect", types);
+      };
+    }
+
+    function populateDropdown(id, items) {
+      const select = document.getElementById(id);
+      select.innerHTML = '<option value="">Select</option>';
+      items.forEach(val => {
+        const opt = document.createElement("option");
+        opt.value = opt.textContent = val;
+        select.appendChild(opt);
+      });
+    }
+
+    function clearDropdowns(ids) {
+      ids.forEach(id => {
+        const select = document.getElementById(id);
+        select.innerHTML = '<option value="">Select</option>';
+      });
+    }
+
+    async function startAssessment() {
+      const year = filterYear.value;
+      const term = filterTerm.value;
+      const subject = subjectSelect.value;
+      const type = typeSelect.value;
+
+      if (!year || !term || !subject || !type) return alert("Please select all fields.");
+
+      const match = allDocs.find(d => d.year === year && d.term === term && d.subject === subject && d.type === type);
+      if (!match) return alert("Assessment not found.");
+
+      const originalUrl = match.link;
+      const scriptUrl = 'https://script.google.com/macros/s/AKfycbzGSvL_Ey5gzvb9K2Ba-OauEmQP-pn4pm8I9FVaX_7E0Du77pO0EsWUjCeqWqVPm1CEzg/exec';
+      const requestUrl = `${scriptUrl}?name=${encodeURIComponent(studentName)}&class=${encodeURIComponent(studentClass)}&assign=${encodeURIComponent(subject)}&url=${encodeURIComponent(originalUrl)}`;
+
+      try {
+        const res = await fetch(requestUrl);
+        const result = await res.json();
+
+        if (result.url) {
+          const finalLink = result.url;
+          await db.ref(`submissions/${studentClass}/${subject}/${studentName}`).set({
+            link: finalLink,
+            timestamp: new Date().toISOString()
+          });
+
+          document.getElementById("assessmentLink").href = finalLink;
+          document.getElementById("assessmentIframe").src = finalLink;
+          document.getElementById("assessmentContainer").style.display = "block";
+        } else {
+          alert("Copy creation failed.");
+        }
+      } catch (err) {
+        console.error("Fetch error:", err);
+        alert("Failed to start assessment.");
+      }
+    }
+  </script>
+</body>
+</html>

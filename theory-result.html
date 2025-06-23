@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Combined Results</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 1rem;
+    }
+    .container {
+      max-width: 100%;
+      overflow-x: auto;
+      background: white;
+      padding: 1rem;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #003366;
+    }
+    label, select {
+      display: block;
+      margin: 10px 0 5px;
+    }
+    select {
+      padding: 10px;
+      font-size: 1rem;
+      width: 100%;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      text-align: center;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      font-size: 0.9rem;
+    }
+    th.group-header {
+      background: #d7f0c2;
+      font-weight: bold;
+      text-align: center;
+    }
+    td.score-cell {
+      background: #f0fff0;
+    }
+    td.total {
+      font-weight: bold;
+      background: #e8ffe8;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2>Theory Results Broadsheet</h2>
+  <label for="year">Academic Year</label>
+  <select id="year"></select>
+  <label for="term">Term</label>
+  <select id="term"></select>
+  <div id="resultsArea"></div>
+</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+    authDomain: "school-6425b.firebaseapp.com",
+    databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+    projectId: "school-6425b",
+    storageBucket: "school-6425b.appspot.com",
+    messagingSenderId: "929265479935",
+    appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const auth = firebase.auth();
+
+  let teacherClass = "";
+  let weight = { "CA 1": 20, "CA 2": 20, "Project": 10, "Assignment": 10, "Examination": 40 };
+  let types = Object.keys(weight);
+
+  auth.onAuthStateChanged(user => {
+    if (!user) return location.href = 'login.html';
+    db.ref(`users/${user.uid}`).once("value").then(snap => {
+      const data = snap.val();
+      if (!data || data.role !== 'teacher') {
+        alert("Access denied");
+        return location.href = 'dashboard.html';
+      }
+      teacherClass = data.class;
+      loadYears();
+    });
+  });
+
+  function loadYears() {
+    db.ref("docAssessments").once("value").then(snap => {
+      const years = new Set();
+      snap.forEach(child => {
+        const item = child.val();
+        if (item.class === teacherClass) years.add(item.year);
+      });
+      populateSelect("year", Array.from(years));
+      document.getElementById("year").onchange = loadTerms;
+    });
+  }
+
+  function loadTerms() {
+    const year = document.getElementById("year").value;
+    db.ref("docAssessments").once("value").then(snap => {
+      const terms = new Set();
+      snap.forEach(child => {
+        const item = child.val();
+        if (item.class === teacherClass && item.year === year) terms.add(item.term);
+      });
+      populateSelect("term", Array.from(terms));
+      document.getElementById("term").onchange = renderTable;
+    });
+  }
+
+  function populateSelect(id, items) {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">Select</option>';
+    items.forEach(i => {
+      const opt = document.createElement("option");
+      opt.value = opt.textContent = i;
+      sel.appendChild(opt);
+    });
+  }
+
+  function renderTable() {
+    const year = document.getElementById("year").value;
+    const term = document.getElementById("term").value;
+    if (!year || !term) return;
+
+    db.ref(`scores/${teacherClass}`).once("value").then(scoreSnap => {
+      const allScores = scoreSnap.val() || {};
+      const subjects = Object.keys(allScores);
+      const studentsSet = new Set();
+      const tableData = {};
+
+      subjects.forEach(subject => {
+        tableData[subject] = {};
+        types.forEach(type => {
+          const scores = (allScores[subject]?.[type]) || {};
+          for (let student in scores) {
+            studentsSet.add(student);
+            if (!tableData[subject][student]) tableData[subject][student] = {};
+            tableData[subject][student][type] = Math.min((scores[student] * weight[type]) / 100, weight[type]);
+          }
+        });
+      });
+
+      const students = Array.from(studentsSet);
+      let html = '<table><thead><tr><th rowspan="2">Student</th>';
+
+      subjects.forEach(subject => {
+        html += `<th class="group-header" colspan="6">${subject}</th>`;
+      });
+      html += '</tr><tr>';
+
+      subjects.forEach(() => {
+        types.forEach(t => html += `<th>${t}</th>`);
+        html += '<th>Total</th>';
+      });
+
+      html += '</tr></thead><tbody>';
+
+      students.forEach(student => {
+        html += `<tr><td>${student}</td>`;
+        subjects.forEach(subject => {
+          let total = 0;
+          types.forEach(type => {
+            const val = tableData[subject]?.[student]?.[type] || 0;
+            total += val;
+            html += `<td class="score-cell">${val.toFixed(1)}</td>`;
+          });
+          html += `<td class="total">${total.toFixed(1)}</td>`;
+        });
+        html += '</tr>';
+      });
+
+      html += '</tbody></table>';
+      document.getElementById("resultsArea").innerHTML = html;
+    });
+  }
+</script>
+</body>
+</html>

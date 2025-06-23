@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Notes & To-Do</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Orbitron:wght@600&display=swap" rel="stylesheet">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      background: #f4f7f8;
+      color: #00332d;
+      height: 100%;
+      overflow: hidden;
+    }
+.main-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: start;
+  height: 100%;
+  padding-top: 30px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.header {
+  margin: 14px 0;
+}
+
+.new-note-btn {
+  margin: 0 auto 20px;
+  display: block;
+}
+
+#notesContainer {
+  width: 90%;
+  max-width: 700px;
+}
+
+    .note-item button {
+      background: none;
+      border: none;
+      color: #00796b;
+      font-size: 14px;
+      cursor: pointer;
+      margin-left: 6px;
+    }
+    .new-note-btn {
+      background: #00695c;
+      color: #fff;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      margin: 0 14px 10px;
+    }
+    .expired {
+      border-left: 5px solid red;
+      background: #ffebee;
+    }
+    .modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      animation: zoomFade 0.4s ease-in-out;
+    }
+    .modal-box {
+      background: linear-gradient(135deg, #ffffff, #f1f1f1);
+      padding: 30px;
+      width: 90%;
+      height: 90%;
+      max-width: 820px;
+      border-radius: 16px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+      overflow-y: auto;
+      font-size: 14px;
+      transform: scale(1.02);
+    }
+    @keyframes zoomFade {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .modal textarea {
+      width: 100%;
+      height: 200px;
+      padding: 12px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      margin-bottom: 14px;
+      background: #fff;
+    }
+    .modal input[type="datetime-local"] {
+      width: 100%;
+      padding: 10px;
+      font-size: 13px;
+      margin-bottom: 14px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    .modal .buttons {
+      display: flex;
+      justify-content: flex-end;
+    }
+    .modal .buttons button {
+      margin-left: 10px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .modal .save-btn { background: #00796b; color: #fff; }
+    .modal .cancel-btn { background: #ccc; }
+    .notification {
+      font-size: 12px;
+      color: red;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+<div class="main-container">
+  <div class="header">📝 My Notes & To-Do</div>
+  <button class="new-note-btn" onclick="openModal()">➕ New Task</button>
+  <div id="notesContainer">Loading...</div>
+</div>
+
+  <div class="modal" id="noteModal" style="display:none">
+    <div class="modal-box">
+      <textarea id="noteInput" placeholder="Enter your task or note..."></textarea>
+      <input type="datetime-local" id="scheduleInput" />
+      <div class="buttons">
+        <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+        <button class="save-btn" onclick="saveNote()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+      authDomain: "school-6425b.firebaseapp.com",
+      databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+      projectId: "school-6425b",
+      storageBucket: "school-6425b.appspot.com",
+      messagingSenderId: "929265479935",
+      appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.database();
+    let currentUserId = null;
+    let editingNoteId = null;
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUserId = user.uid;
+        loadNotes();
+      } else {
+        document.getElementById("notesContainer").innerHTML = "Please login to view your notes.";
+      }
+    });
+
+    function openModal(noteId = null, content = '', schedule = '') {
+      editingNoteId = noteId;
+      document.getElementById("noteInput").value = content;
+      document.getElementById("scheduleInput").value = schedule;
+      document.getElementById("noteModal").style.display = "flex";
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      editingNoteId = null;
+      document.getElementById("noteModal").style.display = "none";
+      document.body.style.overflow = 'auto';
+    }
+
+    function saveNote() {
+      const content = document.getElementById("noteInput").value.trim();
+      const schedule = document.getElementById("scheduleInput").value;
+      if (!content) return;
+
+      const ref = db.ref("notes/" + currentUserId);
+      if (editingNoteId) {
+        ref.child(editingNoteId).update({ content, schedule });
+      } else {
+        ref.push({ content, schedule });
+      }
+      closeModal();
+      loadNotes();
+    }
+
+    function deleteNote(id) {
+      if (confirm("Delete this note?")) {
+        db.ref("notes/" + currentUserId + "/" + id).remove().then(loadNotes);
+      }
+    }
+
+    function loadNotes() {
+      db.ref("notes/" + currentUserId).once("value").then(snapshot => {
+        const container = document.getElementById("notesContainer");
+        if (!snapshot.exists()) {
+          container.innerHTML = "No notes found.";
+          return;
+        }
+        const now = new Date();
+        const data = snapshot.val();
+        container.innerHTML = Object.entries(data).map(([id, note]) => {
+          const isExpired = note.schedule && new Date(note.schedule) < now;
+          return `
+            <div class="note-item ${isExpired ? 'expired' : ''}">
+              <div class="text">${note.content || ''}
+                ${note.schedule ? `<div class="notification">Scheduled for: ${new Date(note.schedule).toLocaleString()} ${isExpired ? '⚠️ Overdue' : ''}</div>` : ''}
+              </div>
+              <div class="actions">
+                <button onclick="openModal('${id}', \`${note.content.replace(/`/g, '\`')}\`, '${note.schedule || ''}')" title="Edit">✏️</button>
+                <button onclick="deleteNote('${id}')" title="Delete">🗑️</button>
+              </div>
+            </div>`;
+        }).join("");
+      });
+    }
+  </script>
+</body>
+</html>

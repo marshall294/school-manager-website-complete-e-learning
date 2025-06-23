@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Teacher Attendance | ORLI Academy</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif; margin: 0; background: #eef2f7;
+    }
+    header {
+      background: #004d99; color: white;
+      padding: 20px; text-align: center; font-size: 1.8rem;
+    }
+    .container {
+      max-width: 1000px; margin: 30px auto; background: #fff;
+      padding: 30px; border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    }
+    label { display: block; margin-top: 15px; font-weight: bold; }
+    select, input[type="date"] {
+      width: 100%; padding: 10px; margin-top: 5px;
+      border: 1px solid #ccc; border-radius: 5px;
+    }
+    button {
+      margin-top: 20px; padding: 10px 16px;
+      background: #00796b; color: white; border: none;
+      border-radius: 5px; cursor: pointer;
+    }
+    button:hover { background: #004d40; }
+    table {
+      width: 100%; border-collapse: collapse; margin-top: 30px;
+    }
+    th, td {
+      border: 1px solid #ccc; padding: 10px; text-align: center;
+    }
+    th { background: #e0f2f1; }
+    .info-box {
+      margin-top: 20px; background: #f4faff;
+      padding: 20px; border-radius: 10px;
+      border-left: 5px solid #004d99;
+      font-size: 16px; line-height: 1.6;
+    }
+    .info-box span {
+      display: block; margin-bottom: 6px;
+    }
+    .warning { color: red; font-weight: bold; margin-top: 10px; }
+    #saveStatus { color: green; font-weight: bold; margin-top: 10px; }
+    h3 { margin-top: 40px; color: #004d99; }
+    .summary-table th { background: #ffe0b2; }
+  </style>
+</head>
+<body>
+
+<header>📋 Teacher Attendance</header>
+<div class="container">
+
+  <label for="year">Academic Year:</label>
+  <select id="year">
+    <option value="">-- Select Year --</option>
+    <option>2025–2026</option>
+    <option>2026–2027</option>
+    <option>2027–2028</option>
+  </select>
+
+  <label for="term">Term:</label>
+  <select id="term">
+    <option value="">-- Select Term --</option>
+    <option>First Term</option>
+    <option>Second Term</option>
+    <option>Third Term</option>
+  </select>
+
+  <div class="info-box" id="termInfo"></div>
+
+  <label for="datePicker">Date:</label>
+  <input type="date" id="datePicker" disabled />
+  <p class="warning" id="weekendWarning"></p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Student</th>
+        <th>Present</th>
+        <th>Absent</th>
+        <th>Sick</th>
+        <th>Travel</th>
+      </tr>
+    </thead>
+    <tbody id="studentsTable"></tbody>
+  </table>
+
+  <button onclick="saveAttendance()">Save Attendance</button>
+  <p id="saveStatus"></p>
+
+  <h3>📊 Attendance Summary</h3>
+  <table class="summary-table">
+    <thead>
+      <tr>
+        <th>Student</th>
+        <th>Present</th>
+        <th>Absent</th>
+        <th>Attendance %</th>
+      </tr>
+    </thead>
+    <tbody id="summaryTable"></tbody>
+  </table>
+
+</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+    authDomain: "school-6425b.firebaseapp.com",
+    databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+    projectId: "school-6425b",
+    storageBucket: "school-6425b.appspot.com",
+    messagingSenderId: "929265479935",
+    appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const auth = firebase.auth();
+
+  let teacherClass = "", teacherName = "", start = "", end = "", students = [];
+
+  const yearSelect = document.getElementById("year");
+  const termSelect = document.getElementById("term");
+  const datePicker = document.getElementById("datePicker");
+  const termInfo = document.getElementById("termInfo");
+  const studentsTable = document.getElementById("studentsTable");
+  const weekendWarning = document.getElementById("weekendWarning");
+  const saveStatus = document.getElementById("saveStatus");
+  const summaryTable = document.getElementById("summaryTable");
+
+  function isWeekend(dateStr) {
+    const day = new Date(dateStr).getDay();
+    return day === 6 || day === 0;
+  }
+
+  function daysBetween(startDate, endDate) {
+    const s = new Date(startDate);
+    const e = new Date(endDate);
+    return Math.ceil((e - s) / (1000 * 60 * 60 * 24)) + 1;
+  }
+
+  function loadTeacherAndTerm() {
+    const year = yearSelect.value;
+    const term = termSelect.value;
+    if (!year || !term || !auth.currentUser) return;
+
+    db.ref("users/" + auth.currentUser.uid).once("value").then(snap => {
+      const data = snap.val();
+      if (!data || !data.class) {
+        termInfo.innerHTML = `<span style="color:red">⚠ Your profile has no class assigned.</span>`;
+        return;
+      }
+
+      teacherClass = data.class;
+      teacherName = data.name;
+
+      db.ref(`term_dates/${year}/${term}/${teacherClass}`).once("value").then(termSnap => {
+        const termData = termSnap.val();
+        if (!termData || !termData.start || !termData.end) {
+          termInfo.innerHTML = `<span style="color:red">⚠ Term info not found for ${teacherClass}.</span>`;
+          return;
+        }
+
+        start = termData.start;
+        end = termData.end;
+        const schoolDays = daysBetween(start, end);
+
+        termInfo.innerHTML = `
+          <span>👤 <b>Teacher:</b> ${teacherName}</span>
+          <span>🏫 <b>Class:</b> ${teacherClass}</span>
+          <span>📘 <b>Term:</b> ${term}</span>
+          <span>📅 <b>Start:</b> ${start}</span>
+          <span>📅 <b>End:</b> ${end}</span>
+          <span>📈 <b>School Days:</b> ${schoolDays}</span>
+        `;
+
+        datePicker.disabled = false;
+        datePicker.min = start;
+        datePicker.max = end;
+        const today = new Date().toISOString().split("T")[0];
+        datePicker.value = (today >= start && today <= end) ? today : start;
+        weekendWarning.textContent = isWeekend(datePicker.value) ? "⚠ Weekend selected: attendance disabled." : "";
+
+        loadStudents();
+        loadSummary();
+      });
+    });
+  }
+
+  function loadStudents() {
+    db.ref("users").once("value").then(snap => {
+      students = [];
+      studentsTable.innerHTML = "";
+      snap.forEach(child => {
+        const user = child.val();
+        if (user.class === teacherClass && user.role === "student") {
+          students.push({ id: child.key, name: user.name });
+        }
+      });
+      renderStudents();
+    });
+  }
+
+  function renderStudents() {
+    const date = datePicker.value;
+    studentsTable.innerHTML = "";
+    db.ref(`attendance/${teacherClass}/dates/${date}`).once("value").then(snap => {
+      const data = snap.val() || {};
+      students.forEach(stu => {
+        const tr = document.createElement("tr");
+        const tdName = document.createElement("td");
+        tdName.textContent = stu.name;
+        tr.appendChild(tdName);
+
+        ["present", "absent", "sick", "travel"].forEach(status => {
+          const td = document.createElement("td");
+          const input = document.createElement("input");
+          input.type = "radio";
+          input.name = "att-" + stu.id;
+          input.value = status;
+          input.disabled = isWeekend(date);
+          if (data[stu.id] === status) input.checked = true;
+          td.appendChild(input);
+          tr.appendChild(td);
+        });
+
+        studentsTable.appendChild(tr);
+      });
+    });
+  }
+
+  function saveAttendance() {
+    const date = datePicker.value;
+    if (!date || isWeekend(date)) {
+      saveStatus.textContent = "⚠ Cannot save on weekends.";
+      return;
+    }
+
+    const record = {};
+    students.forEach(stu => {
+      const sel = document.querySelector(`input[name="att-${stu.id}"]:checked`);
+      record[stu.id] = sel ? sel.value : "absent";
+    });
+
+    db.ref(`attendance/${teacherClass}/dates/${date}`).set(record).then(() => {
+      saveStatus.textContent = "✅ Attendance saved.";
+      setTimeout(() => saveStatus.textContent = "", 3000);
+      loadSummary();
+    });
+  }
+
+  function loadSummary() {
+    summaryTable.innerHTML = "";
+    const attendanceRef = db.ref(`attendance/${teacherClass}/dates`);
+    attendanceRef.once("value").then(snap => {
+      const allDates = snap.val() || {};
+      const counts = {};
+      students.forEach(s => counts[s.id] = { name: s.name, present: 0, absent: 0 });
+
+      for (const date in allDates) {
+        const daily = allDates[date];
+        for (const id in daily) {
+          if (counts[id]) {
+            if (daily[id] === "present") counts[id].present += 1;
+            else if (daily[id] === "absent") counts[id].absent += 1;
+          }
+        }
+      }
+
+      for (const id in counts) {
+        const c = counts[id];
+        const total = c.present + c.absent;
+        const percent = total > 0 ? Math.round((c.present / total) * 100) : 0;
+        summaryTable.innerHTML += `
+          <tr>
+            <td>${c.name}</td>
+            <td>${c.present}</td>
+            <td>${c.absent}</td>
+            <td>${percent}%</td>
+          </tr>`;
+      }
+    });
+  }
+
+  datePicker.addEventListener("change", () => {
+    weekendWarning.textContent = isWeekend(datePicker.value) ? "⚠ Weekend selected: attendance disabled." : "";
+    renderStudents();
+  });
+
+  yearSelect.addEventListener("change", loadTeacherAndTerm);
+  termSelect.addEventListener("change", loadTeacherAndTerm);
+
+  auth.onAuthStateChanged(user => {
+    if (!user) {
+      alert("Please login");
+      location.href = "login.html";
+    }
+  });
+</script>
+
+</body>
+</html>

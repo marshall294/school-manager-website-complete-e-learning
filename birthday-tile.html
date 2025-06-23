@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Birthday Countdown</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 10px;
+      background: linear-gradient(135deg, #f0f9ff, #d2f4ea);
+      color: #002d2f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+      overflow: hidden;
+      animation: fadeIn 2s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .name-frame {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 18px;
+      font-weight: 400;
+      color: #004d40;
+      background: #ffffff;
+      padding: 5px 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 12px;
+    }
+    .message-frame {
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: #004d40;
+      background: #e0f2f1;
+      padding: 10px 16px;
+      border-radius: 10px;
+      max-width: 95%;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+    .confetti {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9999;
+    }
+  </style>
+</head>
+<body>
+  <div class="name-frame" id="username">Loading...</div>
+  <div class="message-frame" id="message">Loading message...</div>
+  <canvas id="confettiCanvas" class="confetti"></canvas>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+      authDomain: "school-6425b.firebaseapp.com",
+      databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+      projectId: "school-6425b",
+      storageBucket: "school-6425b.appspot.com",
+      messagingSenderId: "929265479935",
+      appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    function formatCountdown(timeDiff) {
+      const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((timeDiff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((timeDiff / (1000 * 60)) % 60);
+      const seconds = Math.floor((timeDiff / 1000) % 60);
+      return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    }
+
+    function launchConfetti() {
+      const duration = 5 * 1000;
+      const end = Date.now() + duration;
+      (function frame() {
+        confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0 } });
+        confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1 } });
+        if (Date.now() < end) requestAnimationFrame(frame);
+      })();
+    }
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        db.ref("users/" + user.uid).once("value").then(snapshot => {
+          const data = snapshot.val();
+          const name = data?.name || "User";
+          const dob = data?.dob;
+
+          document.getElementById("username").textContent = name;
+
+          if (!dob) {
+            document.getElementById("message").textContent = `Your date of birth is not set.`;
+            return;
+          }
+
+          const dobDate = new Date(dob);
+          const now = new Date();
+          let nextBirthday = new Date(now.getFullYear(), dobDate.getMonth(), dobDate.getDate());
+          if (now > nextBirthday) nextBirthday.setFullYear(now.getFullYear() + 1);
+
+          const nextAge = nextBirthday.getFullYear() - dobDate.getFullYear();
+          let hasFiredConfetti = false;
+
+          function update() {
+            const now = new Date();
+            const isBirthday = now.getDate() === dobDate.getDate() && now.getMonth() === dobDate.getMonth();
+            if (isBirthday) {
+              document.getElementById("message").textContent = `Today is your birthday! 🎉🎂 You are now ${nextAge} years old.`;
+              if (!hasFiredConfetti) {
+                launchConfetti();
+                hasFiredConfetti = true;
+              }
+            } else {
+              const diff = nextBirthday - now;
+              document.getElementById("message").textContent = `Your next birthday will be in ${formatCountdown(diff)} when you will turn ${nextAge} years old.`;
+            }
+          }
+
+          update();
+          setInterval(update, 1000);
+        });
+      } else {
+        document.getElementById("username").textContent = "Not logged in";
+        document.getElementById("message").textContent = "Please login to view your birthday countdown.";
+      }
+    });
+  </script>
+</body>
+</html>

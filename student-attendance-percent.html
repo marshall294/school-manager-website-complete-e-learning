@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Attendance Summary</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: #f0f4f8;
+      overflow: hidden;
+      height: 100%;
+    }
+    .container {
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      width: 95%;
+      max-width: 550px;
+    }
+    .title {
+      font-size: 15px;
+      font-weight: bold;
+      color: #004080;
+    }
+    .value {
+      font-size: 18px;
+      color: green;
+      margin-top: 10px;
+    }
+    .note {
+      font-size: 14px;
+      color: #777;
+      margin-top: 5px;
+    }
+    .row {
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="card" id="displayCard">
+    <div class="title" id="title">Loading...</div>
+    <div class="row value" id="value">--</div>
+    <div class="row note" id="note"></div>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+  authDomain: "school-6425b.firebaseapp.com",
+  databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+  projectId: "school-6425b",
+  storageBucket: "school-6425b.appspot.com",
+  messagingSenderId: "929265479935",
+  appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+
+auth.onAuthStateChanged(user => {
+  if (!user) return setDisplay("Not Logged In", "--", "");
+
+  db.ref("users/" + user.uid).once("value").then(snap => {
+    const userData = snap.val();
+    if (!userData || !userData.role) return setDisplay("Access Denied", "--", "");
+
+    const role = userData.role;
+    const name = userData.name || "User";
+    const className = (userData.class || "").trim();
+    const year = "2025–2026";  // Match your Firebase data
+    const term = "First";      // Match your Firebase data
+
+    if (role === "student") {
+      loadStudentAttendance(user.uid, name, className, year, term);
+    } else {
+      setDisplay("Access Denied", "--", "Only students see summary here.");
+    }
+  });
+});
+
+function setDisplay(title, value, note) {
+  document.getElementById("title").textContent = title;
+  document.getElementById("value").textContent = value;
+  document.getElementById("note").textContent = note;
+}
+
+function loadStudentAttendance(uid, name, className, year, term) {
+  db.ref(`holidays/${year}/${term}`).once("value").then(holidaySnap => {
+    const holidays = holidaySnap.val() || {};
+    const holidayDates = Object.keys(holidays);
+
+    db.ref(`attendance/${year}/${term}/${className}`).once("value").then(snap => {
+      const records = snap.val() || {};
+      let total = 0, present = 0;
+
+      Object.entries(records).forEach(([dateStr, dailyRecord]) => {
+        const status = dailyRecord?.[uid]?.status || "";
+        const isWeekend = new Date(dateStr).getDay() === 0 || new Date(dateStr).getDay() === 6;
+        const isHoliday = holidayDates.includes(dateStr);
+
+        if (!isWeekend && !isHoliday && status && status !== "Holiday") {
+          total++;
+          if (status === "Present") present++;
+        }
+      });
+
+      if (total === 0) {
+        setDisplay(`${name}'s Attendance`, "N/A", "No attendance records yet.");
+      } else {
+        const percent = ((present / total) * 100).toFixed(1);
+        setDisplay(`${name}'s Attendance`, `${percent}%`, `Present: ${present} / ${total}`);
+      }
+    });
+  });
+}
+
+
+  function loadTeacherClassCount(className) {
+    db.ref("users").once("value").then(snap => {
+      const users = snap.val() || {};
+      let count = 0;
+      Object.values(users).forEach(u => {
+        if (u.role === "student" && u.class === className) count++;
+      });
+      setDisplay(`Your Class: ${className}`, count, "Total students in your class");
+    });
+  }
+
+  function loadSchoolCounts(rolesToCount, titleText) {
+    db.ref("users").once("value").then(snap => {
+      const users = snap.val() || {};
+      const counts = {};
+      rolesToCount.forEach(role => counts[role] = 0);
+
+      Object.values(users).forEach(u => {
+        if (rolesToCount.includes(u.role)) counts[u.role]++;
+      });
+
+      const valueLines = Object.entries(counts).map(([role, count]) =>
+        `${capitalize(role)}s: ${count}`
+      ).join(" | ");
+
+      setDisplay(titleText, valueLines, "Across entire school");
+    });
+  }
+
+  function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+</script>
+
+</body>
+</html>

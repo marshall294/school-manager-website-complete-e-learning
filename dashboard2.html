@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Dashboard - ORLI International Academy</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(to right, #f4f9f9, #e0f7fa);
+      color: #333;
+      display: flex;
+      min-height: 100vh;
+    }
+    header {
+      background: #00695c;
+      padding: 20px;
+      color: #fff;
+      text-align: center;
+      font-size: 24px;
+      font-weight: 700;
+      position: fixed;
+      width: 100%;
+      top: 0;
+      left: 0;
+      z-index: 1000;
+    }
+    .sidebar {
+      width: 260px;
+      background: #004d40;
+      padding-top: 80px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100%;
+      overflow-y: auto;
+      transition: transform 0.3s ease;
+      z-index: 1001;
+    }
+    .sidebar ul {
+      list-style: none;
+    }
+    .sidebar li {
+      padding: 16px 24px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      color: #fff;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+    .sidebar li:hover {
+      background: #00695c;
+    }
+    .sidebar li span {
+      margin-left: 10px;
+    }
+    .main-content {
+      margin-left: 260px;
+      padding: 100px 30px 30px;
+      flex: 1;
+    }
+    .main-content h2 {
+      font-size: 26px;
+      color: #004d40;
+      margin-bottom: 20px;
+    }
+    .main-content p {
+      font-size: 16px;
+      line-height: 1.6;
+      max-width: 700px;
+    }
+    .logout-btn {
+      background: #f44336;
+      color: #fff;
+      padding: 10px 18px;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      margin-top: 24px;
+    }
+    .logout-btn:hover {
+      background: #d32f2f;
+    }
+    .toggle-btn {
+      display: none;
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: #004d40;
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 4px;
+      z-index: 1002;
+    }
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+      .sidebar.active {
+        transform: translateX(0);
+      }
+      .main-content {
+        margin-left: 0;
+        padding: 100px 15px;
+      }
+      .toggle-btn {
+        display: block;
+      }
+    }
+  </style>
+</head>
+<body>
+<button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+  <header id="greeting">Welcome to ORLI International Academy</header>
+
+<div class="sidebar" id="sidebar">
+  <ul id="navItems"></ul>
+</div>
+
+<div class="main-content">
+  <style>
+    .tiles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-top: 30px;
+    }
+    .tile-frame {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.2s ease;
+    }
+    .tile-frame:hover {
+      transform: translateY(-2px);
+    }
+    .tile-header {
+      background: #004d40;
+      color: white;
+      padding: 12px 16px;
+      font-weight: 600;
+      font-size: 16px;
+    }
+    .tile-content {
+      flex: 1;
+      height: 300px;
+    }
+    .tile-content iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    @media (max-width: 600px) {
+      .tile-content {
+        height: 250px;
+      }
+    }
+  </style>
+
+  <h2 id="roleTitle">Dashboard</h2>
+  <p>
+    ORLI International Academy is a center of academic excellence.
+  </p>
+  <p>Please use the side navigation menu to explore your personalized dashboard tools and resources.</p>
+
+  <div class="tiles-grid">
+    <div class="tile-frame">
+      <div class="tile-header">🎂 Birthday Countdown</div>
+      <div class="tile-content">
+        <iframe src="birthday-tile.html" title="Birthday Countdown"></iframe>
+      </div>
+    </div>
+
+    <div class="tile-frame">
+      <div class="tile-header">📊 Recent Activities</div>
+      <div class="tile-content">
+        <iframe src="activities-tile.html" title="Recent Activity"></iframe>
+      </div>
+    </div>
+
+    <div class="tile-frame">
+      <div class="tile-header">📝 Personal Notes</div>
+      <div class="tile-content">
+        <iframe src="notes_id.html" title="Notes"></iframe>
+      </div>
+    </div>
+
+    <div class="tile-frame">
+      <div class="tile-header">📅 Upcoming Events</div>
+      <div class="tile-content">
+        <iframe src="calendar-tile.html" title="Calendar"></iframe>
+      </div>
+    </div>
+
+    <div class="tile-frame">
+      <div class="tile-header">📚 Library</div>
+      <div class="tile-content">
+        <iframe src="library-tile.html" title="Library"></iframe>
+      </div>
+    </div>
+
+    <div class="tile-frame">
+      <div class="tile-header">📚 Profile Picture</div>
+      <div class="tile-content">
+        <iframe src="picture-tile.html" title="Picture"></iframe>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Optional: you can later enhance these frames by sending data with postMessage if needed
+  </script>
+</div>
+
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+    authDomain: "school-6425b.firebaseapp.com",
+    databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+    projectId: "school-6425b",
+    storageBucket: "school-6425b.appspot.com",
+    messagingSenderId: "929265479935",
+    appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  const navItemsByRole = {
+    'student': [
+      ['🏠', 'Dashboard Home', '#'],
+      ['📝', 'Take CBT', 'take-cbt.html'],
+      ['📄', 'Take Theory Assessment', 'take-theory.html'],
+      ['📊', 'View Results', 'results.html'],
+      ['👤', 'Profile', 'profile.html'],
+      ['🚪', 'Logout', '#logout']
+    ],
+    'teacher': [
+      ['🧾', 'Upload CBT Questions', 'cbt-upload.html'],
+      ['📄', 'Upload Theory Questions', 'upload-theory.html'],
+      ['📋', 'Mark Theory Scripts', 'mark-theory.html'],
+      ['📈', 'View Class Results', 'view-results.html'],
+      ['🗂️', 'Manage Class Library', 'admin-library-tile.html'],
+      ['🧑‍🎓', 'View Students', 'students.html'],
+      ['⚙️', 'Settings', 'settings.html'],
+      ['🚪', 'Logout', '#logout']
+    ],
+    'hod': [
+      ['🏠', 'Dashboard Home', '#'],
+      ['📁', 'Approve Assessments (CBT/Theory)', 'approve-assessments.html'],
+      ['🗃️', 'Department Results Overview', 'dept-results.html'],
+      ['📚', 'Subject Teacher Performance', 'teacher-performance.html'],
+      ['👥', 'Manage Department Teachers', 'manage-teachers.html'],
+      ['📈', 'Generate Department Reports', 'dept-reports.html'],
+      ['🧑‍🎓', 'View Students by Class', 'students-by-class.html'],
+      ['⚙️', 'Settings', 'settings.html'],
+      ['🚪', 'Logout', '#logout']
+    ],
+    'hos': [
+      ['🏠', 'Dashboard Home', '#'],
+      ['✅', 'Approve HOD Reports', 'approve-hod-reports.html'],
+      ['📄', 'Schoolwide Assessment Status', 'school-status.html'],
+      ['📊', 'Compare Departmental Performance', 'compare-depts.html'],
+      ['📈', 'Generate School Reports', 'school-reports.html'],
+      ['📂', 'Archive Results', 'archive-results.html'],
+      ['⚙️', 'Settings', 'settings.html'],
+      ['🚪', 'Logout', '#logout']
+    ],
+    'admin': [
+      ['🏠', 'Dashboard Home', '#'],
+      ['🧑‍🎓', 'Manage Students', 'manage-students.html'],
+      ['👨‍🏫', 'Manage Teachers', 'manage-teachers.html'],
+      ['🏫', 'Manage Classes & Subjects', 'classes-subjects.html'],
+      ['🔐', 'Create/Update Academic Year & Terms', 'academic-settings.html'],
+      ['📁', 'System Settings', 'system-settings.html'],
+      ['📊', 'Assessment Data & Logs', 'assessment-logs.html'],
+      ['🗃️', 'Backup/Restore Data', 'backup.html'],
+      ['🚪', 'Logout', '#logout']
+    ],
+    'super-admin': [
+      ['🏠', 'Dashboard Home', '#'],
+      ['👥', 'Manage All Users', 'all-users.html'],
+      ['🛠️', 'Portal Configurations', 'portal-config.html'],
+      ['🏷️', 'Access Roles & Permissions', 'roles.html'],
+      ['🔒', 'Security Logs', 'security-logs.html'],
+      ['📂', 'Backup/Restore Entire System', 'super-backup.html'],
+      ['🧮', 'Analytics (Usage, Performance)', 'analytics.html'],
+      ['📬', 'Send Notifications', 'notifications.html'],
+      ['🔍', 'Audit Logs', 'audit-logs.html'],
+      ['🚪', 'Logout', '#logout']
+    ],
+    'accountant': [
+      ['🏠', 'Dashboard Home', '#'],
+      ['💰', 'Manage Fees', 'fees.html'],
+      ['📊', 'Generate Financial Reports', 'finance-reports.html'],
+      ['🧾', 'View Transactions', 'transactions.html'],
+      ['⚙️', 'Settings', 'settings.html'],
+      ['🚪', 'Logout', '#logout']
+    ]
+  };
+
+  function renderSidebar(role) {
+    const navItems = navItemsByRole[role] || [];
+    document.getElementById('sidebar').innerHTML = navItems.map(
+      ([icon, label, link]) => {
+        const isLogout = link === '#logout';
+        return `
+          <a href="${isLogout ? '#' : link}" 
+             ${isLogout ? 'onclick="handleLogout(event)"' : ''}
+             style="
+              display: block;
+              margin: 10px 0;
+              padding: 12px 20px;
+              background: linear-gradient(145deg, #ffffff, #e6e6e6);
+              border-radius: 12px;
+              border: none;
+              box-shadow: 0 8px 15px rgba(0,0,0,0.1),
+                          inset 0 0 10px rgba(255,255,255,0.6),
+                          inset 0 0 5px rgba(255,255,255,0.4);
+              font-weight: bold;
+              color: #333;
+              text-decoration: none;
+              transition: transform 0.2s, box-shadow 0.3s;
+            " 
+            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 12px 20px rgba(0,0,0,0.2), 0 0 10px #00e5ff, inset 0 0 10px #fff'; this.style.color='#000';"
+            onmouseout="this.style.transform='none'; this.style.boxShadow='0 8px 15px rgba(0,0,0,0.1), inset 0 0 10px rgba(255,255,255,0.6), inset 0 0 5px rgba(255,255,255,0.4)'; this.style.color='#333';">
+              ${icon} ${label}
+          </a>`;
+      }
+    ).join('');
+  }
+
+  function handleLogout(event) {
+    event.preventDefault();
+    firebase.auth().signOut().then(() => {
+      window.location.href = 'login.html';
+    }).catch((error) => {
+      console.error("Logout error:", error);
+      alert("Failed to logout. Please try again.");
+    });
+  }
+
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      db.ref("users/" + user.uid).once("value").then(snapshot => {
+        const data = snapshot.val();
+        const role = data.role.toLowerCase();
+        const roleTitle = role.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+        document.getElementById("roleTitle").textContent = `${roleTitle} Dashboard`;
+        document.getElementById("greeting").textContent = `Welcome, ${data.name} (${roleTitle})`;
+
+        // ✅ Now rendering the sidebar correctly per role
+        renderSidebar(role);
+      });
+    } else {
+      window.location.href = "login.html";
+    }
+  });
+
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('active');
+  }
+</script>
+
+</body>
+</html>

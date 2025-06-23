@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Principal Comments</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f7f9;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #2e3b4e;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      font-size: 1.5rem;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 20px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      overflow-x: auto;
+    }
+    .filters {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    select, button {
+      padding: 10px;
+      font-size: 1rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 800px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: left;
+    }
+    th {
+      background: #eef1f5;
+    }
+    textarea {
+      width: 100%;
+      height: 60px;
+      font-size: 14px;
+      padding: 8px;
+      resize: vertical;
+    }
+    .fixed-col {
+      position: sticky;
+      left: 0;
+      background: #fff;
+      z-index: 2;
+    }
+    .action-btns {
+      display: flex;
+      gap: 10px;
+    }
+    .save-btn {
+      background: #00796b;
+      color: #fff;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .save-btn:hover {
+      background: #004d40;
+    }
+  </style>
+</head>
+<body>
+  <header>📝 Principal Comments</header>
+  <div class="container">
+    <div class="filters">
+      <select id="year"></select>
+      <select id="term"></select>
+      <button onclick="loadStudents()">Load Students</button>
+    </div>
+    <div id="tableContainer"></div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+      authDomain: "school-6425b.firebaseapp.com",
+      databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+      projectId: "school-6425b",
+      storageBucket: "school-6425b.appspot.com",
+      messagingSenderId: "929265479935",
+      appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    let principalClass = "";
+
+    auth.onAuthStateChanged(async user => {
+      if (!user) return location.href = "login.html";
+      const snap = await db.ref(`users/${user.uid}`).once("value");
+      const info = snap.val();
+      if (!info || info.role !== "principal") return location.href = "dashboard.html";
+      principalClass = info.class;
+      loadFilters();
+    });
+
+    function loadFilters() {
+      const years = ["2023", "2024", "2025"];
+      const terms = ["1st Term", "2nd Term", "3rd Term"];
+      populate("year", years);
+      populate("term", terms);
+    }
+
+    function populate(id, list) {
+      const sel = document.getElementById(id);
+      sel.innerHTML = `<option value="">Select ${id}</option>`;
+      list.forEach(v => {
+        const opt = document.createElement("option");
+        opt.value = opt.textContent = v;
+        sel.appendChild(opt);
+      });
+    }
+
+    async function loadStudents() {
+      const year = document.getElementById("year").value;
+      const term = document.getElementById("term").value;
+      if (!year || !term) return alert("Please select year and term");
+
+      const scoresSnap = await db.ref(`scores/${principalClass}`).once("value");
+      const scores = scoresSnap.val() || {};
+      const students = new Set();
+
+      Object.values(scores).forEach(subject => {
+        Object.values(subject).forEach(types => {
+          Object.keys(types).forEach(name => students.add(name));
+        });
+      });
+
+      const commentData = (await db.ref(`principalComments/${principalClass}/${year}/${term}`).once("value")).val() || {};
+
+      let html = '<table><thead><tr><th class="fixed-col">Student</th><th>Comment</th><th>Action</th></tr></thead><tbody>';
+      Array.from(students).sort().forEach(student => {
+        const existingComment = commentData[student]?.text || "";
+        html += `<tr><td class="fixed-col">${student}</td>
+          <td><textarea id="comment-${student}">${existingComment}</textarea></td>
+          <td class="action-btns">
+            <button class="save-btn" onclick="saveComment('${student}')">Save</button>
+          </td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      document.getElementById("tableContainer").innerHTML = html;
+    }
+
+    function saveComment(student) {
+      const year = document.getElementById("year").value;
+      const term = document.getElementById("term").value;
+      const text = document.getElementById(`comment-${student}`).value.trim();
+      if (!text) return alert("Please enter a comment for " + student);
+
+      db.ref(`principalComments/${principalClass}/${year}/${term}/${student}`).set({ text })
+        .then(() => alert("Saved for " + student))
+        .catch(err => alert("Error saving: " + err.message));
+    }
+  </script>
+</body>
+</html>

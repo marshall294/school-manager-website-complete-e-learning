@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Assessment Results | ORLI Academy</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f1f8e9;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #33691e;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      font-size: 24px;
+    }
+    nav {
+      background: #c5e1a5;
+      padding: 10px 20px;
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+    }
+    nav a {
+      color: #1b5e20;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 20px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .filters label {
+      font-weight: bold;
+      display: block;
+      margin-top: 10px;
+    }
+    .filters select {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #558b2f;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #33691e;
+    }
+    #assessmentInfo {
+      margin-top: 20px;
+      padding: 10px;
+      background: #f9fbe7;
+      border-left: 4px solid #558b2f;
+      display: none;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      display: none;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: left;
+    }
+    th {
+      background: #c5e1a5;
+    }
+    #detailModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    #answerScript {
+      background: white;
+      max-height: 80vh;
+      overflow: auto;
+      padding: 20px;
+      width: 90%;
+      max-width: 800px;
+      border-radius: 8px;
+    }
+    .question-block {
+      margin-bottom: 15px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      background: #f9f9f9;
+      border-left: 4px solid #558b2f;
+    }
+  </style>
+</head>
+<body>
+  <header>CBT Results</header>
+  <nav>
+    <a href="cbt-result.html">📊 CBT BROADSHEET</a>
+  </nav>
+  <div class="container">
+    <div class="filters">
+      <label for="year">Academic Year:</label>
+      <select id="year"></select>
+
+      <label for="term">Term:</label>
+      <select id="term"></select>
+
+      <label for="subject">Subject:</label>
+      <select id="subject"></select>
+
+      <label for="type">Assessment Type:</label>
+      <select id="type"></select>
+
+      <button onclick="loadResults()">Load Results</button>
+    </div>
+
+    <div id="assessmentInfo"></div>
+
+    <table id="resultsTable">
+      <thead>
+        <tr>
+          <th>Student Name</th>
+          <th>Subject</th>
+          <th>Score (%)</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div id="detailModal">
+    <div id="answerScript">
+      <button onclick="closeModal()">Close</button>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+      authDomain: "school-6425b.firebaseapp.com",
+      databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+      projectId: "school-6425b",
+      storageBucket: "school-6425b.appspot.com",
+      messagingSenderId: "929265479935",
+      appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const filters = ["year", "term", "subject", "type"];
+    const selected = {};
+    let teacherClass = "";
+    let filteredCBTs = [];
+
+    auth.onAuthStateChanged(user => {
+      if (!user) return location.href = "login.html";
+      db.ref(`users/${user.uid}`).once("value").then(snap => {
+        const data = snap.val();
+        if (!data || data.role !== 'teacher') return location.href = 'dashboard.html';
+        teacherClass = data.class;
+        loadValidCBTs();
+      });
+    });
+
+    function loadValidCBTs() {
+      db.ref("cbtBank").once("value").then(cbtSnap => {
+        const allCBTs = Object.entries(cbtSnap.val() || {}).map(([id, val]) => ({ ...val, id }));
+        const classCBTs = allCBTs.filter(cbt => cbt.published && cbt.class === teacherClass);
+
+        db.ref("results").once("value").then(resultSnap => {
+          const resultList = Object.values(resultSnap.val() || {});
+          const validIds = new Set(resultList.map(r => r.cbtId));
+          filteredCBTs = classCBTs.filter(cbt => validIds.has(cbt.id));
+
+          const sets = { year: new Set(), term: new Set(), subject: new Set(), type: new Set() };
+          filteredCBTs.forEach(item => filters.forEach(f => item[f] && sets[f].add(item[f])));
+
+          filters.forEach(f => {
+            const sel = document.getElementById(f);
+            sel.innerHTML = `<option value="">-- Select ${f} --</option>`;
+            Array.from(sets[f]).sort().forEach(v => {
+              sel.innerHTML += `<option value="${v}">${v}</option>`;
+            });
+          });
+        });
+      });
+    }
+
+    function loadResults() {
+      filters.forEach(f => selected[f] = document.getElementById(f).value);
+      if (Object.values(selected).includes("")) {
+        alert("Please complete all filters.");
+        return;
+      }
+
+      const match = filteredCBTs.find(a =>
+        a.year == selected.year &&
+        a.term == selected.term &&
+        a.class == teacherClass &&
+        a.subject == selected.subject &&
+        a.type == selected.type
+      );
+
+      const infoBox = document.getElementById("assessmentInfo");
+      const table = document.getElementById("resultsTable");
+      const tbody = document.querySelector("#resultsTable tbody");
+
+      if (!match) {
+        infoBox.style.display = "block";
+        infoBox.innerHTML = `<strong>No results found</strong> for the selected filter.`;
+        table.style.display = "none";
+        tbody.innerHTML = "";
+        return;
+      }
+
+      infoBox.style.display = "block";
+      infoBox.innerHTML = `
+        <strong>Assessment:</strong> ${match.subject} (${match.type})<br>
+        <strong>Class:</strong> ${match.class} &nbsp;&nbsp;
+        <strong>Term:</strong> ${match.term} &nbsp;&nbsp;
+        <strong>Year:</strong> ${match.year}
+      `;
+
+      db.ref("results").orderByChild("cbtId").equalTo(match.id).once("value").then(snap => {
+        const data = snap.val() || {};
+        tbody.innerHTML = "";
+
+        if (Object.keys(data).length === 0) {
+          infoBox.innerHTML += `<br><em>No student submissions yet.</em>`;
+          table.style.display = "none";
+          return;
+        }
+
+        Object.entries(data).forEach(([_, val]) => {
+          let correct = 0;
+          const answers = val.answers || [];
+          match.questions.forEach((q, i) => {
+            const studentAns = (answers[i] || "").toLowerCase();
+            const correctAns = (q.answer || "").toLowerCase();
+            if (studentAns === correctAns) correct++;
+          });
+
+          const score = ((correct / match.questions.length) * 100).toFixed(2);
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${val.student}</td>
+            <td>${match.subject}</td>
+            <td>${score}</td>
+            <td><button onclick='viewDetail("${match.id}", "${val.student.replace(/"/g, '&quot;')}")'>View</button></td>
+          `;
+          tbody.appendChild(row);
+        });
+
+        table.style.display = "table";
+      });
+    }
+
+    function viewDetail(cbtId, studentName) {
+      const box = document.getElementById("answerScript");
+      box.innerHTML = `<button onclick="closeModal()">Close</button><p><strong>Student:</strong> ${studentName}</p>`;
+
+      const assessment = filteredCBTs.find(cbt => cbt.id === cbtId);
+      db.ref("results").orderByChild("cbtId").equalTo(cbtId).once("value").then(snap => {
+        const data = snap.val() || {};
+        const entry = Object.values(data).find(v => v.student === studentName);
+        if (!entry) {
+          box.innerHTML += "<p>No answer script found for this student.</p>";
+          return;
+        }
+
+        const answers = entry.answers || [];
+        assessment.questions.forEach((q, i) => {
+          const picked = (answers[i] || "").toLowerCase();
+          const correctAns = (q.answer || "").toLowerCase();
+          box.innerHTML += `
+            <div class="question-block">
+              <strong>Q${i + 1}:</strong> ${q.question}<br>
+              ${["a", "b", "c", "d"].map(opt => `
+                <div>${opt.toUpperCase()}: ${q[opt]} 
+                  ${picked === opt ? "✅" : ""} 
+                  ${correctAns === opt && picked !== opt ? "✔️" : ""}
+                </div>
+              `).join("")}
+              <div><strong>Your Answer:</strong> ${picked.toUpperCase() || "N/A"}</div>
+              <div><strong>Correct Answer:</strong> ${correctAns.toUpperCase()}</div>
+            </div>
+          `;
+        });
+
+        document.getElementById("detailModal").style.display = "flex";
+      });
+    }
+
+    function closeModal() {
+      document.getElementById("detailModal").style.display = "none";
+    }
+    window.closeModal = closeModal;
+  </script>
+</body>
+</html>

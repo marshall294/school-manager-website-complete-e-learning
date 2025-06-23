@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Teacher Library Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #e0f7fa;
+      color: #333;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #00695c;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+      justify-content: center;
+    }
+    .controls select, .controls input, .controls button {
+      padding: 8px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    .controls label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .book-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px;
+      max-width: 1100px;
+      margin: auto;
+    }
+    .book-tile {
+      background: white;
+      padding: 12px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+    .book-tile img {
+      height: 180px;
+      width: 120px;
+      object-fit: cover;
+      border-radius: 4px;
+      margin: 0 auto;
+    }
+    .book-title {
+      font-weight: 600;
+      margin-top: 8px;
+      color: #004d40;
+    }
+    .book-actions button {
+      margin-top: 6px;
+      padding: 6px 10px;
+      font-size: 13px;
+      background: #f44336;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .book-actions button:hover {
+      background: #d32f2f;
+    }
+    .top-bar {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    .top-bar span {
+      font-weight: bold;
+      color: #004d40;
+    }
+    .logout-btn {
+      margin-left: 15px;
+      background: #00695c;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .logout-btn:hover {
+      background: #004d40;
+    }
+  </style>
+</head>
+<body>
+  <h2>📚 Teacher - Manage Class Library</h2>
+  <div class="top-bar">
+    Welcome, <span id="userName">Loading...</span>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+
+  <div class="controls">
+    <select id="userSelect">
+      <option value="">Select Student</option>
+    </select>
+    <label>
+      <input type="checkbox" id="allClassCheckbox" />
+      Upload for all students
+    </label>
+    <input type="text" id="titleInput" placeholder="Book Title" />
+    <input type="text" id="thumbnailInput" placeholder="Thumbnail URL" />
+    <input type="text" id="pdfInput" placeholder="PDF Link" />
+    <button onclick="uploadBook()">Upload Book</button>
+  </div>
+
+  <div class="book-list" id="bookList">Loading books...</div>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+      authDomain: "school-6425b.firebaseapp.com",
+      databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+      projectId: "school-6425b",
+      storageBucket: "school-6425b.appspot.com",
+      messagingSenderId: "929265479935",
+      appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let currentTeacherClass = "";
+    let currentTeacherName = "";
+
+    firebase.auth().onAuthStateChanged(user => {
+      if (!user) {
+        alert("You must be logged in.");
+        return (window.location.href = "login.html");
+      }
+
+      db.ref("users/" + user.uid).once("value").then(snap => {
+        const userData = snap.val();
+        if (!userData || userData.role !== "teacher") {
+          alert("Access denied. Only teachers are allowed.");
+          return (window.location.href = "dashboard.html");
+        }
+
+        currentTeacherClass = userData.class || "";
+        currentTeacherName = userData.name || "Teacher";
+        document.getElementById("userName").textContent = currentTeacherName;
+        loadUsers();
+        loadBooks();
+      });
+    });
+
+    function logout() {
+      firebase.auth().signOut().then(() => {
+        window.location.href = "login.html";
+      });
+    }
+
+    function loadUsers() {
+      const userSelect = document.getElementById("userSelect");
+      userSelect.innerHTML = '<option value="">Select Student</option>';
+      db.ref("users").once("value").then(snap => {
+        const users = snap.val();
+        Object.entries(users).forEach(([uid, user]) => {
+          if (user.role === "student" && user.class === currentTeacherClass) {
+            const opt = document.createElement("option");
+            opt.value = uid;
+            opt.textContent = `${user.name} (${user.class})`;
+            userSelect.appendChild(opt);
+          }
+        });
+      });
+    }
+
+    function loadBooks() {
+      db.ref("library").once("value").then(snap => {
+        const list = document.getElementById("bookList");
+        const data = snap.val();
+        if (!data) return list.innerHTML = "No books found.";
+        list.innerHTML = Object.entries(data).map(([id, b]) => `
+          <div class="book-tile">
+            <img src="${b.thumbnail}" alt="Book">
+            <div class="book-title">${b.title || 'Untitled Book'}</div>
+            <a href="${b.pdf}" target="_blank">Open PDF</a>
+            <div class="book-actions">
+              <button onclick="deleteBook('${id}')">Delete</button>
+            </div>
+          </div>`).join('');
+      });
+    }
+
+    function uploadBook() {
+      const uid = document.getElementById("userSelect").value;
+      const forAll = document.getElementById("allClassCheckbox").checked;
+      const title = document.getElementById("titleInput").value.trim();
+      const thumbnail = document.getElementById("thumbnailInput").value.trim();
+      const pdf = document.getElementById("pdfInput").value.trim();
+
+      if (!title || !thumbnail || !pdf) {
+        return alert("Title, thumbnail, and PDF are required");
+      }
+
+      if (!forAll && !uid) {
+        return alert("Please select a student or check 'Upload for all students'.");
+      }
+
+      const book = {
+        title,
+        thumbnail,
+        pdf,
+        class: currentTeacherClass,
+        uploadedBy: currentTeacherName
+      };
+
+      if (!forAll) {
+        book.uid = uid;
+      }
+
+      db.ref("library").push(book).then(() => {
+        alert("Book uploaded successfully.");
+        loadBooks();
+      });
+    }
+
+    function deleteBook(id) {
+      if (confirm("Delete this book?")) {
+        db.ref("library/" + id).remove().then(loadBooks);
+      }
+    }
+  </script>
+</body>
+</html>

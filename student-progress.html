@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student Progress Report</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f7f9;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #004d40;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.5rem;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 20px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .filters select {
+      flex: 1;
+      padding: 10px;
+      font-size: 1rem;
+    }
+    button {
+      background: #00796b;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #004d40;
+    }
+    #printExport {
+      margin-top: 20px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .report-frame {
+      border: 2px solid #ccc;
+      padding: 30px;
+      margin-top: 20px;
+      border-radius: 12px;
+      background: #ffffff;
+    }
+    .report-header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .report-header img {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+    .school-name {
+      font-size: 22px;
+      font-weight: bold;
+      color: #004d40;
+      margin-top: 10px;
+    }
+    .report-meta {
+      margin: 10px 0;
+      font-size: 14px;
+      color: #333;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+      font-size: 14px;
+    }
+    th {
+      background-color: #e0f2f1;
+    }
+    .comment-block {
+      margin-top: 25px;
+      padding: 15px;
+      background: #f9f9f9;
+      border-left: 5px solid #00796b;
+      border-radius: 8px;
+    }
+    .signatures {
+      margin-top: 40px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+    }
+    .sign-line {
+      margin-top: 50px;
+      border-top: 1px solid #333;
+      width: 45%;
+      text-align: center;
+      padding-top: 5px;
+    }
+
+    @media print {
+      body {
+        background: white;
+      }
+      header, .filters, #printExport {
+        display: none;
+      }
+      .container {
+        box-shadow: none;
+        margin: 0;
+        padding: 0;
+      }
+      .report-frame {
+        border: none;
+        padding: 0;
+        margin: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>📄 Student Progress Report</header>
+  <div class="container">
+    <div class="filters">
+      <select id="year"><option value="">Select Year</option></select>
+      <select id="term"><option value="">Select Term</option></select>
+      <select id="student"><option value="">Select Student</option></select>
+      <button onclick="loadReport()">Load Report</button>
+    </div>
+
+    <div id="reportContainer"></div>
+
+    <div id="printExport">
+      <button onclick="window.print()">🖨️ Print Report</button>
+      <button onclick="exportPDF()">📁 Export as PDF</button>
+    </div>
+  </div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+    authDomain: "school-6425b.firebaseapp.com",
+    databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+    projectId: "school-6425b",
+    storageBucket: "school-6425b.appspot.com",
+    messagingSenderId: "929265479935",
+    appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  let teacherClass = "";
+  const weight = { "CA 1": 20, "CA 2": 20, "Project": 10, "Assignment": 10, "Examination": 40 };
+  const types = Object.keys(weight);
+  let allScores = {}, allResults = [], cbts = [], selectedYear = "", selectedTerm = "";
+
+  auth.onAuthStateChanged(async user => {
+    if (!user) return location.href = "login.html";
+    const userSnap = await db.ref(`users/${user.uid}`).once("value");
+    const data = userSnap.val();
+    if (!data || data.role !== "teacher") return location.href = "dashboard.html";
+    teacherClass = data.class;
+    loadFilters();
+  });
+
+  async function loadFilters() {
+    const [cbtSnap, docSnap] = await Promise.all([
+      db.ref("cbtBank").once("value"),
+      db.ref("scores/" + teacherClass).once("value")
+    ]);
+    cbts = Object.values(cbtSnap.val() || {}).filter(c => c.class === teacherClass);
+    allScores = docSnap.val() || {};
+
+    const yearSet = new Set();
+    const termSet = new Set();
+    const studentSet = new Set();
+
+    cbts.forEach(c => {
+      yearSet.add(c.year);
+      termSet.add(c.term);
+    });
+
+    Object.values(allScores).forEach(subject => {
+      Object.values(subject).forEach(typeObj => {
+        Object.keys(typeObj).forEach(student => studentSet.add(student));
+      });
+    });
+
+    populate("year", Array.from(yearSet));
+    populate("term", Array.from(termSet));
+    populate("student", Array.from(studentSet));
+  }
+
+  function populate(id, items) {
+    const sel = document.getElementById(id);
+    sel.innerHTML = `<option value="">Select ${id}</option>`;
+    items.sort().forEach(v => {
+      const opt = document.createElement("option");
+      opt.value = opt.textContent = v;
+      sel.appendChild(opt);
+    });
+  }
+
+  async function loadReport() {
+    selectedYear = document.getElementById("year").value;
+    selectedTerm = document.getElementById("term").value;
+    const student = document.getElementById("student").value;
+    if (!selectedYear || !selectedTerm || !student) return alert("Please select all filters.");
+
+    const [resultsSnap, commentSnap] = await Promise.all([
+      db.ref("results").once("value"),
+      db.ref(`comments/${teacherClass}/${selectedYear}/${selectedTerm}/${student}/text`).once("value")
+    ]);
+
+    allResults = Object.values(resultsSnap.val() || {});
+    const commentText = commentSnap.val() || "No comment added.";
+
+    const subjects = new Set();
+    const studentData = {};
+    const subjectTotals = {};
+    const subjectScores = {};
+
+    // Process document scores
+    Object.entries(allScores).forEach(([subject, typeObj]) => {
+      Object.entries(typeObj).forEach(([type, studentsObj]) => {
+        Object.entries(studentsObj).forEach(([stu, score]) => {
+          if (!subjectScores[subject]) subjectScores[subject] = {};
+          if (!subjectScores[subject][stu]) subjectScores[subject][stu] = 0;
+          const weighted = (score * weight[type]) / 100;
+          subjectScores[subject][stu] += weighted;
+
+          if (stu === student) {
+            subjects.add(subject);
+            if (!studentData[subject]) studentData[subject] = {};
+            if (!studentData[subject][type]) studentData[subject][type] = {};
+            studentData[subject][type].doc = score;
+          }
+        });
+      });
+    });
+
+    // Process CBT scores
+    cbts.filter(c => c.year === selectedYear && c.term === selectedTerm).forEach(cbt => {
+      const match = allResults.find(r => r.student === student && r.cbtId === cbt.id);
+      const allMatches = allResults.filter(r => r.cbtId === cbt.id);
+      allMatches.forEach(r => {
+        const answers = r.answers || [];
+        let correct = 0;
+        cbt.questions.forEach((q, i) => {
+          if ((answers[i] || "").toLowerCase() === (q.answer || "").toLowerCase()) correct++;
+        });
+        const raw = (correct / cbt.questions.length) * 100;
+        const weighted = (raw * weight[cbt.type]) / 100;
+
+        if (!subjectScores[cbt.subject]) subjectScores[cbt.subject] = {};
+        if (!subjectScores[cbt.subject][r.student]) subjectScores[cbt.subject][r.student] = 0;
+        subjectScores[cbt.subject][r.student] += weighted;
+      });
+
+      if (match) {
+        const answers = match.answers || [];
+        let correct = 0;
+        cbt.questions.forEach((q, i) => {
+          if ((answers[i] || "").toLowerCase() === (q.answer || "").toLowerCase()) correct++;
+        });
+        const score = (correct / cbt.questions.length) * 100;
+        const { subject, type } = cbt;
+        if (!studentData[subject]) studentData[subject] = {};
+        if (!studentData[subject][type]) studentData[subject][type] = {};
+        studentData[subject][type].cbt = score;
+        subjects.add(subject);
+      }
+    });
+
+    // Calculate subject stats
+    const subjectStats = {};
+    Object.entries(subjectScores).forEach(([subject, studentObj]) => {
+      const sorted = Object.entries(studentObj).sort((a, b) => b[1] - a[1]);
+      const highest = sorted[0]?.[1]?.toFixed(1) ?? "-";
+      const lowest = sorted[sorted.length - 1]?.[1]?.toFixed(1) ?? "-";
+      const position = sorted.findIndex(([s]) => s === student) + 1 || "-";
+      subjectStats[subject] = { highest, lowest, position };
+    });
+
+    // Build HTML
+    let html = `<div class="report-frame"><div class="report-header">
+      <img src="logo.png" alt="School Logo"/>
+      <div class="school-name">ORLI International Academy</div>
+      <div class="report-meta">Progress Report for: <strong>${student}</strong><br>
+      Academic Year: ${selectedYear} &nbsp;&nbsp; Term: ${selectedTerm} &nbsp;&nbsp; Class: ${teacherClass}</div>
+    </div>`;
+
+    html += `<table><thead><tr><th>Subject</th>${types.map(t => `<th>${t}</th>`).join("")}<th>Total</th><th>Grade</th><th>Highest</th><th>Lowest</th><th>Position</th></tr></thead><tbody>`;
+
+    let totalOverall = 0, count = 0;
+    Array.from(subjects).sort().forEach(subject => {
+      let total = 0;
+      html += `<tr><td>${subject}</td>`;
+      types.forEach(type => {
+        const doc = studentData[subject]?.[type]?.doc ?? null;
+        const cbt = studentData[subject]?.[type]?.cbt ?? null;
+        let avgRaw = 0;
+        if (doc !== null && cbt !== null) avgRaw = (doc + cbt) / 2;
+        else if (doc !== null) avgRaw = doc;
+        else if (cbt !== null) avgRaw = cbt;
+        const weighted = (avgRaw * weight[type]) / 100;
+        total += weighted;
+        html += `<td>${weighted ? weighted.toFixed(1) : "-"}</td>`;
+      });
+      const grade = getGrade(total);
+      const stats = subjectStats[subject] || {};
+      html += `<td>${total.toFixed(1)}</td><td>${grade}</td><td>${stats.highest}</td><td>${stats.lowest}</td><td>${ordinal(stats.position)}</td></tr>`;
+      if (total > 0) {
+        totalOverall += total;
+        count++;
+      }
+    });
+
+    const avg = count ? (totalOverall / count).toFixed(2) : "0.00";
+    html += `</tbody></table>`;
+    html += `<p style="margin-top:10px;"><strong>Overall Average:</strong> ${avg}</p>`;
+    html += `
+      <div class="comment-block">
+        <strong>Teacher’s Comment:</strong><br>${commentText}
+      </div>
+      <div class="comment-block">
+        <strong>Principal’s Comment:</strong><br>This student has shown commendable effort. Keep it up!
+      </div>
+      <div class="signatures">
+        <div class="sign-line">Teacher's Signature</div>
+        <div class="sign-line">Principal's Signature</div>
+      </div>
+    `;
+    html += `</div>`;
+    document.getElementById("reportContainer").innerHTML = html;
+  }
+
+  function getGrade(score) {
+    if (score >= 70) return "A";
+    if (score >= 60) return "B";
+    if (score >= 50) return "C";
+    if (score >= 45) return "D";
+    if (score >= 40) return "E";
+    return "F";
+  }
+
+  function ordinal(n) {
+    if (!n || isNaN(n)) return "-";
+    const s = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  function exportPDF() {
+    import('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js').then(() => {
+      const container = document.getElementById("reportContainer");
+      html2pdf().from(container).save('Progress_Report.pdf');
+    });
+  }
+</script>
+
+</body>
+</html>

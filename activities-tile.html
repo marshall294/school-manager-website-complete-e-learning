@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recent Activities</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 12px;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(to right, #fdfbfb, #ebedee);
+      color: #00332d;
+      overflow: hidden;
+    }
+    .title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #004d40;
+    }
+    .activity-list {
+      max-height: 90vh;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .activity-item {
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      margin-bottom: 10px;
+      padding: 10px 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      transition: background 0.3s;
+      display: flex;
+      align-items: center;
+    }
+    .activity-item:hover {
+      background: #e0f2f1;
+    }
+    .activity-icon {
+      margin-right: 10px;
+      font-size: 16px;
+    }
+    .activity-text {
+      flex: 1;
+    }
+    .timestamp {
+      display: block;
+      font-size: 11px;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+  <div class="title">Recent Activities</div>
+  <div class="activity-list" id="activityList">Loading activities...</div>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+      authDomain: "school-6425b.firebaseapp.com",
+      databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+      projectId: "school-6425b",
+      storageBucket: "school-6425b.appspot.com",
+      messagingSenderId: "929265479935",
+      appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const iconMap = {
+      login: "🔑",
+      logout: "🚪",
+      update: "✏️",
+      submit: "📤",
+      view: "👁️",
+      delete: "🗑️",
+      upload: "📁",
+      default: "📌"
+    };
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        db.ref("activities/" + user.uid).limitToLast(20).once("value").then(snapshot => {
+          const list = document.getElementById("activityList");
+          if (!snapshot.exists()) {
+            list.innerHTML = "No recent activities available.";
+            return;
+          }
+          const data = Object.entries(snapshot.val()).reverse();
+          list.innerHTML = data.map(([key, entry]) => {
+            const action = entry.action || "Activity";
+            const type = (action.toLowerCase().split(" ")[0]) || "default";
+            const icon = iconMap[type] || iconMap.default;
+            const time = new Date(entry.timestamp || Date.now()).toLocaleString();
+            return `
+              <div class="activity-item">
+                <div class="activity-icon">${icon}</div>
+                <div class="activity-text">${action}<span class="timestamp">${time}</span></div>
+              </div>`;
+          }).join("");
+        });
+      } else {
+        document.getElementById("activityList").innerHTML = "Not logged in.";
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: #f4f7fb;
+  margin: 0;
+  color: #333;
+}
+header {
+  background: #002f6c;
+  color: white;
+  padding: 1rem;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.logo-frame {
+  width: 80px;
+  height: 80px;
+  margin: auto;
+  border: 5px solid #fff;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 0 15px rgba(255,255,255,0.6);
+  margin-bottom: 10px;
+}
+.logo-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+nav {
+  background: #003366;
+  padding: 0.5rem;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+nav a {
+  color: #fff;
+  text-decoration: none;
+  font-weight: bold;
+}
+nav a:hover {
+  text-decoration: underline;
+}
+main {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: auto;
+}
+.box {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  margin-bottom: 2rem;
+}
+input, select, button {
+  padding: 10px;
+  font-size: 1rem;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+button:hover {
+  background-color: #0056b3;
+}
+.cbt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+.cbt-card {
+  background: white;
+  padding: 1rem;
+  border-radius: 10px;
+  border-left: 6px solid #0056b3;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s ease;
+}
+.cbt-card:hover {
+  transform: translateY(-3px);
+}
+.cbt-card h4 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+.published {
+  color: #00b894;
+  font-weight: 600;
+}
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+}
+.actions button {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.85rem;
+}
+.actions button:last-child {
+  background: #d63031;
+}
+footer {
+  text-align: center;
+  padding: 1rem;
+  background: #002f6c;
+  color: white;
+}
+#editBox, #overlay {
+  display: none;
+}
+#overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9998;
+}
+#editBox {
+  position: fixed;
+  top: 5%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 800px;
+  height: 80vh;
+  overflow-y: auto;
+  background: #fff;
+  z-index: 9999;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+}
+.question-block {
+  border-bottom: 1px solid #eee;
+  padding: 1rem 0;
+}
+.question-block input {
+  width: 95%;
+}

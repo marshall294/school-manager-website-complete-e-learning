@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Take CBT | ORLI Academy</title>
+  <link rel="stylesheet" href="take-cbt.css" />
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+</head>
+<body>
+  <header>
+    <div class="logo-frame">
+      <img src="logo.png" alt="ORLI Logo">
+    </div>
+    <h1>ORLI International Academy</h1>
+  </header>
+
+  <nav>
+    <a href="dashboard.html">Back to Dashboard</a>
+  </nav>
+
+  <main>
+    <div class="box" id="start-section">
+      <h2>Start CBT</h2>
+      <label>Student Name</label>
+      <input type="text" id="studentName" disabled />
+      <label>Year</label>
+      <select id="filterYear"><option value="">Select Year</option></select>
+      <label>Term</label>
+      <select id="filterTerm"><option value="">Select Term</option></select>
+      <label>Class</label>
+      <select id="filterClass" disabled></select>
+      <label>Subject</label>
+      <select id="filterSubject"><option value="">Select Subject</option></select>
+      <label>Type</label>
+      <select id="filterType"><option value="">Select Type</option></select>
+      <button onclick="startCBT()">Start CBT</button>
+    </div>
+
+    <div class="box hidden" id="cbt-section">
+      <div id="timer">Time Left: <span id="timeLeft">--:--</span></div>
+      <div class="progress-bar"><div id="progressBar" class="progress"></div></div>
+      <div id="questionContainer"></div>
+      <button id="prevBtn" onclick="prevQuestion()">Previous</button>
+      <button id="nextBtn" onclick="nextQuestion()">Next</button>
+      <button id="submitBtn" onclick="submitCBT()">Submit CBT</button>
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2025 ORLI International Academy. All rights reserved.
+  </footer>
+
+  <script src="take-cbt.js"></script>
+</body>
+</html>

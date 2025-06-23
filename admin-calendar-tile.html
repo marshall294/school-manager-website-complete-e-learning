@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Calendar - Events Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f9f9f9;
+      color: #333;
+    }
+    header {
+      padding: 14px;
+      background: #00695c;
+      color: white;
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .controls {
+      padding: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: #e0f2f1;
+      align-items: center;
+    }
+    .controls select, .controls button {
+      padding: 6px 10px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    .event-list {
+      padding: 14px;
+    }
+    .event-tile {
+      background: white;
+      margin-bottom: 12px;
+      padding: 14px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      border-left: 5px solid #009688;
+    }
+    .event-tile h4 {
+      margin: 0 0 6px;
+      font-size: 16px;
+    }
+    .event-tile p {
+      margin: 0;
+      font-size: 13px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <header>📅 Admin - Manage Events</header>
+  <div class="controls">
+    <select id="roleFilter">
+      <option value="">All Roles</option>
+      <option value="student">Student</option>
+      <option value="teacher">Teacher</option>
+      <option value="hod">HOD</option>
+      <option value="hos">HOS</option>
+      <option value="accountant">Accountant</option>
+    </select>
+    <select id="classFilter">
+      <option value="">All Classes</option>
+      <option>Year 1</option>
+      <option>Year 2</option>
+      <option>Year 3</option>
+      <option>Year 4</option>
+      <option>Year 5</option>
+      <option>Year 6</option>
+    </select>
+    <select id="userSelect"></select>
+    <button onclick="createNewEvent()">➕ Create Event</button>
+  </div>
+  <div class="event-list" id="eventList">Loading events...</div>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+      authDomain: "school-6425b.firebaseapp.com",
+      databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+      projectId: "school-6425b",
+      storageBucket: "school-6425b.appspot.com",
+      messagingSenderId: "929265479935",
+      appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function loadUsers() {
+      const userSelect = document.getElementById("userSelect");
+      const roleFilter = document.getElementById("roleFilter").value;
+      const classFilter = document.getElementById("classFilter").value;
+      userSelect.innerHTML = '<option value="">Select User</option>';
+
+      db.ref("users").once("value").then(snap => {
+        const users = snap.val();
+        Object.entries(users).forEach(([uid, user]) => {
+          if ((roleFilter && user.role !== roleFilter) || (classFilter && user.class !== classFilter)) return;
+          const option = document.createElement("option");
+          option.value = uid;
+          option.textContent = `${user.name} (${user.role}${user.class ? ' - ' + user.class : ''})`;
+          userSelect.appendChild(option);
+        });
+      });
+    }
+
+    function loadEvents() {
+      db.ref("events").once("value").then(snap => {
+        const list = document.getElementById("eventList");
+        const events = Object.values(snap.val() || {}).sort((a,b) => new Date(a.date) - new Date(b.date)).slice(0,5);
+        if (!events.length) {
+          list.innerHTML = "No events found.";
+          return;
+        }
+        list.innerHTML = events.map(evt => `
+          <div class="event-tile">
+            <h4>${evt.title}</h4>
+            <p>${new Date(evt.date).toLocaleString()}</p>
+            <p>Audience: ${evt.scope}</p>
+          </div>
+        `).join('');
+      });
+    }
+
+    function createNewEvent() {
+      const uid = document.getElementById("userSelect").value;
+      const title = prompt("Enter event title");
+      const date = prompt("Enter event date (YYYY-MM-DDTHH:mm)");
+      if (!title || !date) return alert("Title and date required");
+      const event = { title, date, scope: uid ? `user:${uid}` : "general" };
+      db.ref("events").push(event).then(() => {
+        alert("Event created");
+        loadEvents();
+      });
+    }
+
+    document.getElementById("roleFilter").onchange = loadUsers;
+    document.getElementById("classFilter").onchange = loadUsers;
+    window.onload = () => { loadUsers(); loadEvents(); };
+  </script>
+</body>
+</html>

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CBT Upload & Management | ORLI International Academy</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    /* Styles preserved from your original code */
+    body { font-family: 'Segoe UI', sans-serif; background: #f4f7fb; margin: 0; color: #333; }
+    header { background: #002f6c; color: white; padding: 1rem; text-align: center; position: sticky; top: 0; z-index: 10; }
+    .logo-frame { width:80px; height:80px; margin:auto;border:5px solid #fff;border-radius:50%;overflow:hidden;box-shadow:0 0 15px rgba(255,255,255,0.6);margin-bottom:10px; }
+    .logo-frame img { width:100%;height:100%;object-fit:cover; }
+    nav { background:#003366; padding:.5rem; display:flex; justify-content:center; gap:20px; flex-wrap:wrap }
+    nav a { color:#fff; font-weight:bold; text-decoration:none; }
+    nav a:hover { text-decoration:underline; }
+    main { padding:2rem; max-width:1200px; margin:auto; }
+    .box { background:#fff; padding:1.5rem; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.08); margin-bottom:2rem; }
+    input, select, button { padding:10px; font-size:1rem; margin:10px 0; border:1px solid #ccc; border-radius:6px; width:100%; box-sizing:border-box; }
+    button { background-color:#007bff; color:white; border:none; cursor:pointer; }
+    button:hover { background-color:#0056b3; }
+    .cbt-container { display:grid; grid-template-columns:repeat(auto-fit, minmax(250px,1fr)); gap:1rem; }
+    .cbt-card { background:white; padding:1rem; border-radius:10px; border-left:6px solid #0056b3; box-shadow:0 3px 6px rgba(0,0,0,0.04); transition:transform 0.2s ease; }
+    .cbt-card:hover { transform:translateY(-3px); }
+    .cbt-card h4 { margin:0 0 .5rem; font-size:1rem; }
+    .published { color:#00b894; font-weight:600; }
+    .actions { display:flex; gap:.5rem; margin-top:.8rem; }
+    .actions button { flex:1; padding:.4rem .6rem; font-size:.85rem; }
+    .actions button:last-child { background:#d63031; }
+    #overlay, #editBox { display:none; }
+    #overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9998; }
+    #editBox { position:fixed; top:5%; left:50%; transform:translateX(-50%); width:90%; max-width:800px; height:80vh; overflow-y:auto; background:#fff;
+               z-index:9999; border-radius:10px; padding:20px; box-shadow:0 8px 20px rgba(0,0,0,0.3); }
+    .question-block { border-bottom:1px solid #eee; padding:1rem 0; }
+    .question-block input { width:95%; }
+    footer { text-align:center; padding:1rem; background:#002f6c; color:white; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo-frame"><img src="logo.png" alt="ORLI Logo"></div>
+    <h1>ORLI International Academy</h1>
+  </header>
+  <nav>
+    <a href="#">HOME</a><a href="#">THEORY</a><a href="#">NOTES</a><a href="#">RESULTS</a>
+  </nav>
+
+  <main>
+    <!-- Upload Form -->
+    <div class="box">
+      <h2>Upload CBT (Excel Format)</h2>
+      <label>Academic Year</label>
+      <select id="cbtYear">
+        <option value="2025-2026">2025–2026</option>
+        <option value="2026-2027">2026–2027</option>
+        <option value="2027-2028">2027–2028</option>
+        <option value="2028-2029">2028–2029</option>
+        <option value="2029-2030">2029–2030</option>
+      </select>
+
+      <label>Term</label>
+      <select id="cbtTerm">
+        <option value="First Term">First Term</option>
+        <option value="Second Term">Second Term</option>
+        <option value="Third Term">Third Term</option>
+      </select>
+
+      <label>Class</label>
+      <select id="cbtClass" disabled></select>
+
+      <label>Subject</label>
+      <select id="cbtSubject">
+        <option>Science</option><option>Home Economics</option><option>Geography</option>
+        <option>Agricultural Science</option><option>Mathematics</option><option>Civic Education</option>
+        <option>English Studies</option><option>History</option><option>Christian Religious Studies</option>
+        <option>Islam Religious Studies</option><option>Information and Communication Technology</option>
+        <option>Personal Social and Health Education</option><option>General Knowledge</option>
+      </select>
+
+      <label>Exam Type</label>
+      <select id="cbtType">
+        <option value="CA 1">CA 1</option>
+        <option value="CA 2">CA 2</option>
+        <option value="Examination">Examination</option>
+        <option value="Homework">Homework</option>
+        <option value="Project">Project</option>
+      </select>
+
+      <input type="file" id="excelFile" accept=".xlsx, .xls" />
+      <button onclick="handleUpload()">Upload CBT</button>
+    </div>
+
+    <!-- Filter Form -->
+    <div class="box">
+      <h3>Filter CBT History</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;">
+        <select id="filterYear"><option value="">All Years</option>
+          <option value="2025-2026">2025–2026</option>
+          <option value="2026-2027">2026–2027</option>
+          <option value="2027-2028">2027–2028</option>
+          <option value="2028-2029">2028–2029</option>
+          <option value="2029-2030">2029–2030</option>
+        </select>
+        <select id="filterTerm"><option value="">All Terms</option>
+          <option value="First Term">First Term</option>
+          <option value="Second Term">Second Term</option>
+          <option value="Third Term">Third Term</option>
+        </select>
+        <select id="filterSubject"><option value="">All Subjects</option>
+          <option>Science</option><option>Home Economics</option><option>Geography</option>
+          <option>Agricultural Science</option><option>Mathematics</option><option>Civic Education</option>
+          <option>English Studies</option><option>History</option><option>Christian Religious Studies</option>
+          <option>Islam Religious Studies</option><option>Information and Communication Technology</option>
+          <option>Personal Social and Health Education</option><option>General Knowledge</option>
+        </select>
+        <select id="filterType"><option value="">All Types</option>
+          <option value="CA 1">CA 1</option><option value="CA 2">CA 2</option>
+          <option value="Examination">Examination</option><option value="Homework">Homework</option>
+          <option value="Project">Project</option>
+        </select>
+        <button onclick="loadCBTs()">Apply Filters</button>
+      </div>
+    </div>
+
+    <!-- CBT History -->
+    <div class="box">
+      <h3>Uploaded CBT History</h3>
+      <div class="cbt-container" id="cbtHistory">Loading...</div>
+    </div>
+  </main>
+
+  <div id="overlay"></div>
+  <div id="editBox" class="box">
+    <h3>Edit CBT</h3>
+    <label>Edit Class</label><select id="editClass"></select>
+    <label>Edit Subject</label><select id="editSubject"></select>
+    <label>Edit Exam Type</label><select id="editType"></select>
+    <div id="editQuestions"></div>
+    <button onclick="saveEdits()">Save Changes</button>
+    <button onclick="closeEditBox()" style="background:#888;">Cancel</button>
+  </div>
+
+  <footer>&copy; 2025 ORLI International Academy. All rights reserved.</footer>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+    authDomain: "school-6425b.firebaseapp.com",
+    databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+    projectId: "school-6425b",
+    storageBucket: "school-6425b.appspot.com",
+    messagingSenderId: "929265479935",
+    appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+  let currentEditId = null, teacherClass = '';
+
+  auth.onAuthStateChanged(user => {
+    if (!user) return window.location.href = 'login.html';
+    db.ref(`users/${user.uid}`).once('value').then(snap => {
+      const data = snap.val() || {};
+      if (data.role !== 'teacher') return alert('Unauthorized'), window.location.href = 'dashboard.html';
+      if (!data.class) return alert('No class assigned');
+      teacherClass = data.class;
+      document.getElementById('cbtClass').innerHTML = `<option>${teacherClass}</option>`;
+      setupRealtimeListeners();
+    });
+  });
+
+  function handleUpload() {
+    const file = excelFile.files[0];
+    const year = cbtYear.value, term = cbtTerm.value;
+    const subject = cbtSubject.value, type = cbtType.value, cls = teacherClass;
+    if (!file) return alert("Please select a file.");
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet);
+      const formatted = rows.map((r, i) => ({
+        number: r["Question Number"] || i + 1, question: r["Question"] || '',
+        a: r["Option A"] || '', b: r["Option B"] || '',
+        c: r["Option C"] || '', d: r["Option D"] || '', answer: r["Correct Answer"] || ''
+      })).filter(q => q.question && q.answer);
+
+      if (!formatted.length) return alert("No valid questions found.");
+
+      db.ref('cbtBank').once('value').then(snap => {
+        const existing = Object.values(snap.val() || {}).find(item =>
+          item.year === year &&
+          item.term === term &&
+          item.subject === subject &&
+          item.type === type &&
+          item.class === cls
+        );
+        if (existing) return alert("Duplicate CBT detected for same year, term, subject, type, and class.");
+
+        const id = Date.now();
+        db.ref(`cbtBank/${id}`).set({
+          id, year, term, class: cls, subject, type,
+          questions: formatted,
+          timestamp: new Date().toISOString(),
+          published: false
+        }).then(() => alert("CBT Uploaded Successfully"));
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function setupRealtimeListeners() {
+    const ref = db.ref('cbtBank');
+    cbtHistory.innerHTML = '';
+    ref.off(); // Prevent duplication on reload
+
+    ref.on('child_added', snap => {
+      const item = snap.val();
+      if (item.class !== teacherClass) return;
+      if (!passesFilter(item)) return;
+      appendCBTCard(item);
+    });
+
+    ref.on('child_changed', snap => {
+      const item = snap.val();
+      if (item.class !== teacherClass) return;
+      const old = document.getElementById(`cbt-${item.id}`);
+      if (old) old.remove();
+      if (passesFilter(item)) appendCBTCard(item);
+    });
+
+    ref.on('child_removed', snap => {
+      const id = snap.key;
+      const el = document.getElementById(`cbt-${id}`);
+      if (el) el.remove();
+    });
+  }
+
+  function passesFilter(item) {
+    const fy = filterYear.value, ft = filterTerm.value, fs = filterSubject.value, ftp = filterType.value;
+    return (!fy || item.year === fy) &&
+           (!ft || item.term === ft) &&
+           (!fs || item.subject === fs) &&
+           (!ftp || item.type === ftp);
+  }
+
+  function appendCBTCard(item) {
+    const div = document.createElement('div');
+    div.className = 'cbt-card';
+    div.id = `cbt-${item.id}`;
+    div.innerHTML = `
+      <h4>${item.subject} - ${item.type}</h4>
+      <p><strong>Year:</strong> ${item.year}</p>
+      <p><strong>Term:</strong> ${item.term}</p>
+      <p><strong>Class:</strong> ${item.class}</p>
+      <p><strong>Questions:</strong> ${item.questions.length}</p>
+      <p><strong>Status:</strong> <span class="${item.published ? 'published' : ''}">${
+        item.published ? 'Published' : 'Unpublished'
+      }</span></p>
+      <div class="actions">
+        <button onclick="editCBT(${item.id})">Edit</button>
+        <button onclick="togglePublish(${item.id}, ${item.published})">${
+          item.published ? 'Unpublish' : 'Publish'
+        }</button>
+        <button onclick="deleteCBT(${item.id})">Delete</button>
+      </div>
+    `;
+    cbtHistory.prepend(div);
+  }
+
+  function editCBT(id) {
+    db.ref(`cbtBank/${id}`).once('value').then(snap => {
+      const d = snap.val(); if (!d) return;
+      currentEditId = id;
+      populateDropdown('editClass', d.class);
+      populateDropdown('editSubject', d.subject);
+      populateDropdown('editType', d.type);
+      editQuestions.innerHTML = '';
+      d.questions.forEach((q, i) => {
+        const block = document.createElement('div');
+        block.className = 'question-block';
+        block.innerHTML = `
+          <label>Q${i + 1}: <input value="${q.question}" data-key="question" /></label><br>
+          <label>A: <input value="${q.a}" data-key="a"/></label><br>
+          <label>B: <input value="${q.b}" data-key="b"/></label><br>
+          <label>C: <input value="${q.c}" data-key="c"/></label><br>
+          <label>D: <input value="${q.d}" data-key="d"/></label><br>
+          <label>Answer: <input value="${q.answer}" data-key="answer"/></label>`;
+        editQuestions.appendChild(block);
+      });
+      overlay.style.display = 'block';
+      editBox.style.display = 'block';
+    });
+  }
+
+  function populateDropdown(id, value) {
+    const select = document.getElementById(id);
+    const source = document.getElementById(id.replace('edit', 'cbt'));
+    select.innerHTML = source.innerHTML;
+    select.value = value;
+    if (id === 'editClass') select.disabled = true;
+  }
+
+  function saveEdits() {
+    const blocks = document.querySelectorAll('#editQuestions .question-block');
+    const qs = Array.from(blocks).map((b, i) => {
+      const q = { number: i + 1 };
+      b.querySelectorAll('input').forEach(inp => q[inp.dataset.key] = inp.value);
+      return q.question && q.answer ? q : null;
+    }).filter(x => x);
+    const updates = {
+      subject: editSubject.value,
+      type: editType.value,
+      questions: qs
+    };
+    db.ref(`cbtBank/${currentEditId}`).update(updates).then(() => {
+      alert('CBT updated');
+      closeEditBox();
+    });
+  }
+
+  function closeEditBox() {
+    overlay.style.display = editBox.style.display = 'none';
+    currentEditId = null;
+  }
+
+  function togglePublish(id, current) {
+    db.ref(`cbtBank/${id}/published`).set(!current);
+  }
+
+  function deleteCBT(id) {
+    if (confirm('Are you sure you want to delete this CBT?')) {
+      db.ref(`cbtBank/${id}`).remove();
+    }
+  }
+
+  window.onload = () => {
+    document.getElementById('overlay').onclick = closeEditBox;
+    document.getElementById('filterYear').onchange =
+      document.getElementById('filterTerm').onchange =
+      document.getElementById('filterSubject').onchange =
+      document.getElementById('filterType').onchange = setupRealtimeListeners;
+  };
+</script>
+
+</body>
+</html>

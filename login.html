@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login | ORLI Academy</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #004d40, #00796b);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    .login-box {
+      background: #fff;
+      color: #333;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+      max-width: 400px;
+      width: 100%;
+    }
+    .login-box h2 {
+      text-align: center;
+      color: #00796b;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      width: 100%;
+      margin-top: 20px;
+      padding: 12px;
+      background: #00796b;
+      color: white;
+      font-weight: bold;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #004d40;
+    }
+    .error {
+      color: red;
+      margin-top: 10px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-box">
+  <h2>Login to ORLI Academy</h2>
+  <label for="email">Email</label>
+  <input type="email" id="email" placeholder="Enter your email" />
+
+  <label for="password">Password</label>
+  <input type="password" id="password" placeholder="Enter your password" />
+
+  <button onclick="login()">Login</button>
+  <div class="error" id="errorMsg"></div>
+</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+    authDomain: "school-6425b.firebaseapp.com",
+    projectId: "school-6425b",
+    storageBucket: "school-6425b.firebasestorage.app",
+    messagingSenderId: "929265479935",
+    appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  function login() {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
+    const errorMsg = document.getElementById("errorMsg");
+
+    if (!email || !password) {
+      errorMsg.textContent = "Please fill in all fields.";
+      return;
+    }
+
+    auth.signInWithEmailAndPassword(email, password)
+      .then(userCred => {
+        const uid = userCred.user.uid;
+        return db.ref("users/" + uid).once("value");
+      })
+      .then(snapshot => {
+        const user = snapshot.val();
+        if (!user) {
+          errorMsg.textContent = "User data not found.";
+          return;
+        }
+
+        // Store user info in sessionStorage
+        sessionStorage.setItem("user", JSON.stringify(user));
+
+        // Redirect to dashboard
+        window.location.href = "dashboard.html";
+      })
+      .catch(err => {
+        errorMsg.textContent = err.message;
+      });
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin | ORLI Academy</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f1f1f1;
+      margin: 0;
+      padding: 20px;
+    }
+    h2 {
+      text-align: center;
+      color: #004d40;
+    }
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    .form-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .form-group > div {
+      flex: 1 1 220px;
+    }
+    label {
+      font-size: 14px;
+      font-weight: bold;
+    }
+    input, select {
+      width: 100%;
+      padding: 6px;
+      margin-top: 4px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      background: #00796b;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #004d40;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ccc;
+      text-align: left;
+    }
+    th {
+      background: #e0f2f1;
+    }
+    .actions button {
+      margin-right: 5px;
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+    .delete {
+      background: #e53935;
+    }
+    .filter-group {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    @media(max-width: 600px) {
+      .form-group, .filter-group {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<h2>Admin - Manage Users</h2>
+<div class="container">
+
+  <div class="form-group">
+    <div><label>Name</label><input type="text" id="name" /></div>
+    <div><label>Date of Birth</label><input type="date" id="dob" /></div>
+    <div><label>Sex</label>
+      <select id="sex">
+        <option value="">-- Select --</option>
+        <option>Male</option>
+        <option>Female</option>
+      </select>
+    </div>
+    <div><label>Email</label><input type="email" id="email" /></div>
+    <div><label>Password</label><input type="password" id="password" /></div>
+    <div><label>Role</label>
+      <select id="role" onchange="toggleClassField()">
+        <option value="">-- Select --</option>
+        <option>student</option>
+        <option>teacher</option>
+        <option>hod</option>
+        <option>hos</option>
+        <option>accountant</option>
+        <option>admin</option>
+        <option>super-admin</option>
+      </select>
+    </div>
+    <div id="classContainer"><label>Class</label>
+      <select id="class">
+        <option value="">-- Select --</option>
+        <option>Year 1</option>
+        <option>Year 2</option>
+        <option>Year 3</option>
+        <option>Year 4</option>
+        <option>Year 5</option>
+        <option>Year 6</option>
+      </select>
+    </div>
+    <div><label>Year</label>
+      <select id="year">
+        <option value="">-- Select --</option>
+        <option>2024–2025</option>
+        <option>2025–2026</option>
+        <option>2026–2027</option>
+        <option>2027–2028</option>
+        <option>2028–2029</option>
+        <option>2029–2030</option>
+      </select>
+    </div>
+    <div><label>Term</label>
+      <select id="term">
+        <option value="">-- Select --</option>
+        <option>First</option>
+        <option>Second</option>
+        <option>Third</option>
+      </select>
+    </div>
+  </div>
+
+  <button onclick="saveUser()">Save User</button>
+
+  <div class="filter-group">
+    <div>
+      <label>Filter by Role:</label>
+      <select id="filterRole" onchange="loadUsers()">
+        <option value="">All</option>
+        <option>student</option>
+        <option>teacher</option>
+        <option>hod</option>
+        <option>hos</option>
+        <option>accountant</option>
+        <option>admin</option>
+        <option>super-admin</option>
+      </select>
+    </div>
+    <div>
+      <label>Filter by Class:</label>
+      <select id="filterClass" onchange="loadUsers()">
+        <option value="">All</option>
+        <option>Year 1</option>
+        <option>Year 2</option>
+        <option>Year 3</option>
+        <option>Year 4</option>
+        <option>Year 5</option>
+        <option>Year 6</option>
+      </select>
+    </div>
+    <div>
+      <button onclick="exportCSV()">Export CSV</button>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>Name</th><th>Role</th><th>Class</th><th>Email</th><th>Actions</th></tr>
+    </thead>
+    <tbody id="userTable"></tbody>
+  </table>
+
+</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+    authDomain: "school-6425b.firebaseapp.com",
+    databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+    projectId: "school-6425b",
+    storageBucket: "school-6425b.appspot.com",
+    messagingSenderId: "929265479935",
+    appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+  let editKey = null;
+
+  function toggleClassField() {
+    const role = document.getElementById("role").value;
+    document.getElementById("classContainer").style.display =
+      (role === "student" || role === "teacher") ? "block" : "none";
+  }
+
+  function saveUser() {
+    const name = nameInput.value.trim();
+    const dob = dobInput.value;
+    const sex = sexInput.value;
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+    const role = roleInput.value;
+    const classVal = classInput.value;
+    const year = yearInput.value;
+    const term = termInput.value;
+
+    if (!name || !email || !password || !role) {
+      alert("Name, Email, Password and Role are required.");
+      return;
+    }
+
+    const userData = { name, dob, sex, email, role, class: classVal, year, term };
+
+    if (editKey) {
+      db.ref("users/" + editKey).update(userData).then(() => {
+        alert("User updated.");
+        resetForm(); loadUsers(); editKey = null;
+      });
+    } else {
+      auth.createUserWithEmailAndPassword(email, password).then(cred => {
+        db.ref("users/" + cred.user.uid).set(userData).then(() => {
+          alert("User created.");
+          resetForm(); loadUsers();
+        });
+      }).catch(err => alert("Error: " + err.message));
+    }
+  }
+
+  function loadUsers() {
+    const filterRole = document.getElementById("filterRole").value;
+    const filterClass = document.getElementById("filterClass").value;
+    db.ref("users").once("value").then(snap => {
+      const table = document.getElementById("userTable");
+      table.innerHTML = "";
+      const users = snap.val() || {};
+      Object.entries(users).forEach(([key, user]) => {
+        if ((filterRole && user.role !== filterRole) || (filterClass && user.class !== filterClass)) return;
+        const row = `<tr>
+          <td>${user.name}</td>
+          <td>${user.role}</td>
+          <td>${user.class || "-"}</td>
+          <td>${user.email}</td>
+          <td class="actions">
+            <button onclick="editUser('${key}')">Edit</button>
+            <button class="delete" onclick="deleteUser('${key}')">Delete</button>
+          </td></tr>`;
+        table.innerHTML += row;
+      });
+    });
+  }
+
+  function editUser(key) {
+    db.ref("users/" + key).once("value").then(snap => {
+      const u = snap.val();
+      nameInput.value = u.name;
+      dobInput.value = u.dob;
+      sexInput.value = u.sex;
+      emailInput.value = u.email;
+      passwordInput.value = "password"; // Hidden, not editable
+      roleInput.value = u.role;
+      classInput.value = u.class;
+      yearInput.value = u.year;
+      termInput.value = u.term;
+      toggleClassField();
+      editKey = key;
+    });
+  }
+
+  function deleteUser(key) {
+    if (confirm("Delete this user?")) {
+      db.ref("users/" + key).remove().then(() => {
+        alert("Deleted."); loadUsers();
+      });
+    }
+  }
+
+  function resetForm() {
+    document.querySelectorAll("input, select").forEach(e => e.value = "");
+    toggleClassField();
+    editKey = null;
+  }
+
+  function exportCSV() {
+    db.ref("users").once("value").then(snap => {
+      const data = snap.val() || {};
+      let csv = "Name,Role,Class,Email\n";
+      Object.values(data).forEach(u => {
+        csv += `${u.name},${u.role},${u.class || "-"},${u.email}\n`;
+      });
+      const blob = new Blob([csv], { type: "text/csv" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "users.csv";
+      a.click();
+    });
+  }
+
+  window.onload = () => {
+    toggleClassField();
+    loadUsers();
+  };
+
+  const nameInput = document.getElementById("name");
+  const dobInput = document.getElementById("dob");
+  const sexInput = document.getElementById("sex");
+  const emailInput = document.getElementById("email");
+  const passwordInput = document.getElementById("password");
+  const roleInput = document.getElementById("role");
+  const classInput = document.getElementById("class");
+  const yearInput = document.getElementById("year");
+  const termInput = document.getElementById("term");
+</script>
+
+</body>
+</html>

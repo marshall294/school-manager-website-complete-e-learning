@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Picture - Upload Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f1f1f1;
+      color: #333;
+    }
+    header {
+      padding: 14px;
+      background: #3949ab;
+      color: white;
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .controls {
+      padding: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: #e8eaf6;
+      align-items: center;
+    }
+    .controls select, .controls input, .controls button {
+      padding: 6px 10px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    .picture-list {
+      padding: 14px;
+    }
+    .picture-tile {
+      background: white;
+      margin-bottom: 12px;
+      padding: 14px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .picture-tile img {
+      max-height: 100px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <header>🖼️ Admin - Manage Pictures</header>
+  <div class="controls">
+    <select id="roleFilter">
+      <option value="">All Roles</option>
+      <option value="student">Student</option>
+      <option value="teacher">Teacher</option>
+      <option value="hod">HOD</option>
+      <option value="hos">HOS</option>
+      <option value="accountant">Accountant</option>
+    </select>
+    <select id="classFilter">
+      <option value="">All Classes</option>
+      <option>Year 1</option>
+      <option>Year 2</option>
+      <option>Year 3</option>
+      <option>Year 4</option>
+      <option>Year 5</option>
+      <option>Year 6</option>
+    </select>
+    <select id="userSelect"></select>
+    <input type="text" id="imageUrl" placeholder="Enter Image URL">
+    <button onclick="uploadPicture()">📤 Upload</button>
+  </div>
+  <div class="picture-list" id="pictureList">Loading pictures...</div>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+      authDomain: "school-6425b.firebaseapp.com",
+      databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+      projectId: "school-6425b",
+      storageBucket: "school-6425b.appspot.com",
+      messagingSenderId: "929265479935",
+      appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function loadUsers() {
+      const userSelect = document.getElementById("userSelect");
+      const role = document.getElementById("roleFilter").value;
+      const cls = document.getElementById("classFilter").value;
+      userSelect.innerHTML = '<option value="">Select User</option>';
+
+      db.ref("users").once("value").then(snap => {
+        const users = snap.val() || {};
+        Object.entries(users).forEach(([uid, user]) => {
+          if ((role && user.role !== role) || (cls && user.class !== cls)) return;
+          const opt = document.createElement("option");
+          opt.value = uid;
+          opt.textContent = `${user.name} (${user.role}${user.class ? ' - ' + user.class : ''})`;
+          userSelect.appendChild(opt);
+        });
+      });
+    }
+
+    function uploadPicture() {
+      const uid = document.getElementById("userSelect").value;
+      const url = document.getElementById("imageUrl").value.trim();
+      if (!uid || !url) return alert("User and Image URL required");
+      db.ref("pictures/" + uid).set({ url }).then(() => {
+        alert("Picture uploaded");
+        loadPictures();
+      });
+    }
+
+    function loadPictures() {
+      const list = document.getElementById("pictureList");
+      list.innerHTML = "";
+      db.ref("pictures").once("value").then(picSnap => {
+        db.ref("users").once("value").then(userSnap => {
+          const users = userSnap.val() || {};
+          const pics = picSnap.val() || {};
+          Object.entries(pics).forEach(([uid, pic]) => {
+            const user = users[uid];
+            if (!user) return;
+            const div = document.createElement("div");
+            div.className = "picture-tile";
+            div.innerHTML = `
+              <img src="${pic.url}" alt="${user.name}">
+              <div>
+                <div><strong>${user.name}</strong></div>
+                <div>${user.role}${user.class ? ' - ' + user.class : ''}</div>
+                <button onclick="deletePicture('${uid}')">🗑️ Delete</button>
+              </div>
+            `;
+            list.appendChild(div);
+          });
+        });
+      });
+    }
+
+    function deletePicture(uid) {
+      if (!confirm("Delete this picture?")) return;
+      db.ref("pictures/" + uid).remove().then(() => {
+        alert("Deleted");
+        loadPictures();
+      });
+    }
+
+    document.getElementById("roleFilter").onchange = loadUsers;
+    document.getElementById("classFilter").onchange = loadUsers;
+    window.onload = () => {
+      loadUsers();
+      loadPictures();
+    };
+  </script>
+</body>
+</html>

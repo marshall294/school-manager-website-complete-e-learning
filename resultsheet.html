@@ -1,0 +1,352 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Combined Student Results</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background-color: #f4f6f8;
+      color: #333;
+    }
+
+    header {
+      background-color: #003366;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    nav {
+      background-color: #e0ecf8;
+      display: flex;
+      justify-content: center;
+      padding: 10px 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    nav a {
+      color: #003366;
+      text-decoration: none;
+      margin: 0 20px;
+      font-weight: 600;
+      font-size: 16px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+
+    nav a:hover {
+      background-color: #cce0ff;
+    }
+
+    h2 {
+      margin: 20px;
+      text-align: center;
+      color: #003366;
+    }
+
+    .container {
+      overflow-x: auto;
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 0 auto 40px;
+      max-width: 95%;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 1200px;
+      margin-top: 20px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px 12px;
+      text-align: center;
+    }
+
+    th.group-header {
+      background-color: #d0e3f4;
+      color: #003366;
+      font-size: 15px;
+    }
+
+    th, td.total, td.average {
+      font-weight: bold;
+      background-color: #f7fafd;
+    }
+
+    select {
+      margin: 10px 10px 10px 0;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    button {
+      padding: 8px 16px;
+      font-size: 14px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .filter-bar {
+      padding: 20px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header>📊 Combined Assessment Scores | ORLI Academy</header>
+  <nav>
+    <a href="student-progress.html">📄 Progress Reports</a>
+  </nav>
+
+  <h2>📊 Combined Assessment Scores</h2>
+
+  <div class="filter-bar">
+    <label for="year">Academic Year:</label>
+    <select id="year"><option value="">Select</option></select>
+
+    <label for="term">Term:</label>
+    <select id="term"><option value="">Select</option></select>
+
+    <button onclick="renderCombinedTable()">Load Results</button>
+  </div>
+
+  <div class="container" id="resultsContainer"></div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+    authDomain: "school-6425b.firebaseapp.com",
+    databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+    projectId: "school-6425b",
+    storageBucket: "school-6425b.appspot.com",
+    messagingSenderId: "929265479935",
+    appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  let teacherClass = "";
+  const weight = { "CA 1": 20, "CA 2": 20, "Project": 10, "Assignment": 10, "Examination": 40 };
+  const types = Object.keys(weight);
+
+  auth.onAuthStateChanged(async user => {
+    if (!user) return location.href = "login.html";
+    const snap = await db.ref(`users/${user.uid}`).once("value");
+    const data = snap.val();
+    if (!data || data.role !== "teacher") return location.href = "dashboard.html";
+    teacherClass = data.class;
+    loadYearsAndTerms();
+  });
+
+  async function loadYearsAndTerms() {
+    const [cbtSnap, docSnap] = await Promise.all([
+      db.ref("cbtBank").once("value"),
+      db.ref("docAssessments").once("value")
+    ]);
+
+    const years = new Set();
+    const terms = new Set();
+
+    Object.values(cbtSnap.val() || {}).forEach(item => {
+      if (item.class === teacherClass) {
+        years.add(item.year);
+        terms.add(item.term);
+      }
+    });
+
+    Object.values(docSnap.val() || {}).forEach(item => {
+      if (item.class === teacherClass) {
+        years.add(item.year);
+        terms.add(item.term);
+      }
+    });
+
+    populateSelect("year", Array.from(years));
+    populateSelect("term", Array.from(terms));
+  }
+
+  function populateSelect(id, items) {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">Select</option>';
+    items.sort().forEach(v => {
+      const opt = document.createElement("option");
+      opt.value = opt.textContent = v;
+      sel.appendChild(opt);
+    });
+  }
+
+  async function renderCombinedTable() {
+    const year = document.getElementById("year").value;
+    const term = document.getElementById("term").value;
+    if (!year || !term) return alert("Please select both year and term.");
+
+    const [cbtBankSnap, resultsSnap, scoresSnap] = await Promise.all([
+      db.ref("cbtBank").once("value"),
+      db.ref("results").once("value"),
+      db.ref(`scores/${teacherClass}`).once("value")
+    ]);
+
+    const cbts = Object.entries(cbtBankSnap.val() || {}).map(([id, val]) => ({ ...val, id }))
+      .filter(cbt => cbt.published && cbt.class === teacherClass && cbt.year === year && cbt.term === term);
+
+    const results = Object.values(resultsSnap.val() || {});
+    const scores = scoresSnap.val() || {};
+
+    const students = new Set();
+    const subjects = new Set();
+    const scoreMap = {};
+
+    Object.entries(scores).forEach(([subject, typeObj]) => {
+      subjects.add(subject);
+      Object.entries(typeObj).forEach(([type, studentScores]) => {
+        Object.entries(studentScores).forEach(([student, val]) => {
+          students.add(student);
+          if (!scoreMap[student]) scoreMap[student] = {};
+          if (!scoreMap[student][subject]) scoreMap[student][subject] = {};
+          if (!scoreMap[student][subject][type]) scoreMap[student][subject][type] = {};
+          scoreMap[student][subject][type].doc = val;
+        });
+      });
+    });
+
+    results.forEach(res => {
+      const cbt = cbts.find(c => c.id === res.cbtId);
+      if (!cbt) return;
+      const { student } = res;
+      const answers = res.answers || [];
+      let correct = 0;
+      cbt.questions.forEach((q, i) => {
+        if ((answers[i] || "").toLowerCase() === (q.answer || "").toLowerCase()) correct++;
+      });
+      const rawScore = (correct / cbt.questions.length) * 100;
+
+      students.add(student);
+      subjects.add(cbt.subject);
+      if (!scoreMap[student]) scoreMap[student] = {};
+      if (!scoreMap[student][cbt.subject]) scoreMap[student][cbt.subject] = {};
+      if (!scoreMap[student][cbt.subject][cbt.type]) scoreMap[student][cbt.subject][cbt.type] = {};
+      scoreMap[student][cbt.subject][cbt.type].cbt = rawScore;
+    });
+
+    const subjectScores = {};
+    const subjectList = Array.from(subjects).sort();
+
+    Array.from(students).forEach(student => {
+      subjectList.forEach(subject => {
+        let subjectTotal = 0;
+        types.forEach(type => {
+          const doc = scoreMap[student]?.[subject]?.[type]?.doc ?? null;
+          const cbt = scoreMap[student]?.[subject]?.[type]?.cbt ?? null;
+          let avgRaw = 0;
+
+          if (doc !== null && cbt !== null) avgRaw = (doc + cbt) / 2;
+          else if (doc !== null) avgRaw = doc;
+          else if (cbt !== null) avgRaw = cbt;
+
+          const weighted = Math.min((avgRaw * weight[type]) / 100, weight[type]);
+          subjectTotal += weighted;
+        });
+
+        if (!subjectScores[subject]) subjectScores[subject] = {};
+        subjectScores[subject][student] = subjectTotal;
+      });
+    });
+
+    const subjectRanks = {};
+    const subjectHighLow = {};
+
+    subjectList.forEach(subject => {
+      const entries = Object.entries(subjectScores[subject] || {});
+      entries.sort((a, b) => b[1] - a[1]);
+      subjectHighLow[subject] = {
+        high: entries[0]?.[1]?.toFixed(1) ?? "-",
+        low: entries[entries.length - 1]?.[1]?.toFixed(1) ?? "-"
+      };
+      subjectRanks[subject] = {};
+      let rank = 1;
+      entries.forEach(([student], i) => {
+        if (i > 0 && entries[i][1] < entries[i - 1][1]) rank = i + 1;
+        subjectRanks[subject][student] = rank;
+      });
+    });
+
+    let html = '<table><thead><tr><th rowspan="2">Student</th>';
+    subjectList.forEach(subject => {
+      html += `<th class="group-header" colspan="${types.length + 4}">${subject}</th>`;
+    });
+    html += '<th rowspan="2">Average</th></tr><tr>';
+    subjectList.forEach(() => {
+      types.forEach(type => html += `<th>${type}</th>`);
+      html += `<th>Total</th><th>Highest</th><th>Lowest</th><th>Position</th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    Array.from(students).sort().forEach(student => {
+      html += `<tr><td>${student}</td>`;
+      let overallTotal = 0, subjCount = 0;
+
+      subjectList.forEach(subject => {
+        let subjectTotal = 0;
+        types.forEach(type => {
+          const doc = scoreMap[student]?.[subject]?.[type]?.doc ?? null;
+          const cbt = scoreMap[student]?.[subject]?.[type]?.cbt ?? null;
+          let avgRaw = 0;
+
+          if (doc !== null && cbt !== null) avgRaw = (doc + cbt) / 2;
+          else if (doc !== null) avgRaw = doc;
+          else if (cbt !== null) avgRaw = cbt;
+
+          const weighted = Math.min((avgRaw * weight[type]) / 100, weight[type]);
+          subjectTotal += weighted;
+          html += `<td>${weighted.toFixed(1)}</td>`;
+        });
+
+        const highest = subjectHighLow[subject]?.high ?? "-";
+        const lowest = subjectHighLow[subject]?.low ?? "-";
+        const position = subjectRanks[subject]?.[student] ?? "-";
+
+        html += `<td class="total">${subjectTotal.toFixed(1)}</td>`;
+        html += `<td>${highest}</td><td>${lowest}</td><td>${position}</td>`;
+
+        if (subjectTotal > 0) {
+          overallTotal += subjectTotal;
+          subjCount++;
+        }
+      });
+
+      const avg = subjCount ? (overallTotal / subjCount).toFixed(2) : "0.00";
+      html += `<td class="average">${avg}</td></tr>`;
+    });
+
+    html += '</tbody></table>';
+    document.getElementById("resultsContainer").innerHTML = html;
+  }
+</script>
+
+</body>
+</html>

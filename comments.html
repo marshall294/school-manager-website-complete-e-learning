@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student Comments | ORLI Academy</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background-color: #f4f6f8;
+      color: #333;
+    }
+
+    header {
+      background-color: #003366;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    nav {
+      background-color: #e0ecf8;
+      display: flex;
+      justify-content: center;
+      padding: 10px 0;
+    }
+
+    nav a {
+      color: #003366;
+      text-decoration: none;
+      margin: 0 20px;
+      font-weight: 600;
+      font-size: 16px;
+      padding: 8px 12px;
+      border-radius: 6px;
+    }
+
+    nav a:hover {
+      background-color: #cce0ff;
+    }
+
+    h2 {
+      text-align: center;
+      margin-top: 20px;
+      color: #003366;
+    }
+
+    .filter-bar {
+      text-align: center;
+      margin: 20px 0;
+    }
+
+    select, button {
+      margin: 5px;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .container {
+      max-width: 100%;
+      margin: auto;
+      overflow-x: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1200px;
+      margin-top: 20px;
+      table-layout: auto;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px 12px;
+      text-align: center;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 60px;
+      border-radius: 6px;
+      padding: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      resize: vertical;
+    }
+
+    .class-average {
+      text-align: center;
+      font-size: 18px;
+      margin: 10px 0;
+      color: #003366;
+      font-weight: bold;
+    }
+
+    .sticky-col {
+      position: sticky;
+      left: 0;
+      background: #f9f9f9;
+      z-index: 1;
+    }
+
+    .sticky-head {
+      position: sticky;
+      top: 0;
+      background: #dceeff;
+      z-index: 2;
+    }
+
+    .save-btn {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background-color: #28a745;
+    }
+
+    .save-btn:hover {
+      background-color: #1e7e34;
+    }
+
+    .success {
+      text-align: center;
+      color: green;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <header>📝 Student Comments | ORLI Academy</header>
+  <nav>
+    <a href="student-progress.html">📄 Progress Reports</a>
+  </nav>
+
+  <h2>Teacher Comments</h2>
+
+  <div class="filter-bar">
+    <label for="year">Academic Year:</label>
+    <select id="year"><option value="">Select</option></select>
+
+    <label for="term">Term:</label>
+    <select id="term"><option value="">Select</option></select>
+
+    <button onclick="loadCommentsTable()">Load</button>
+  </div>
+
+  <div class="class-average" id="classAverage"></div>
+
+  <div class="container">
+    <div id="commentsContainer"></div>
+    <button class="save-btn" onclick="saveComments()">💾 Save Comments</button>
+    <div class="success" id="saveMessage"></div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+      authDomain: "school-6425b.firebaseapp.com",
+      databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+      projectId: "school-6425b",
+      storageBucket: "school-6425b.appspot.com",
+      messagingSenderId: "929265479935",
+      appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const weight = { "CA 1": 20, "CA 2": 20, "Project": 10, "Assignment": 10, "Examination": 40 };
+    const types = Object.keys(weight);
+    let teacherClass = "";
+    let currentYear = "", currentTerm = "";
+
+    auth.onAuthStateChanged(async user => {
+      if (!user) return location.href = "login.html";
+      const snap = await db.ref(`users/${user.uid}`).once("value");
+      const data = snap.val();
+      if (!data || data.role !== "teacher") return location.href = "dashboard.html";
+      teacherClass = data.class;
+      loadYearsAndTerms();
+    });
+
+    function populateSelect(id, items) {
+      const sel = document.getElementById(id);
+      sel.innerHTML = '<option value="">Select</option>';
+      items.sort().forEach(v => {
+        const opt = document.createElement("option");
+        opt.value = opt.textContent = v;
+        sel.appendChild(opt);
+      });
+    }
+
+    async function loadYearsAndTerms() {
+      const [cbtSnap, docSnap] = await Promise.all([
+        db.ref("cbtBank").once("value"),
+        db.ref("docAssessments").once("value")
+      ]);
+
+      const years = new Set(), terms = new Set();
+      Object.values(cbtSnap.val() || {}).forEach(i => { if (i.class === teacherClass) { years.add(i.year); terms.add(i.term); } });
+      Object.values(docSnap.val() || {}).forEach(i => { if (i.class === teacherClass) { years.add(i.year); terms.add(i.term); } });
+
+      populateSelect("year", Array.from(years));
+      populateSelect("term", Array.from(terms));
+    }
+
+    async function loadCommentsTable() {
+      currentYear = document.getElementById("year").value;
+      currentTerm = document.getElementById("term").value;
+      if (!currentYear || !currentTerm) return alert("Select both year and term");
+
+      const [cbtSnap, resultSnap, scoreSnap, commentSnap] = await Promise.all([
+        db.ref("cbtBank").once("value"),
+        db.ref("results").once("value"),
+        db.ref(`scores/${teacherClass}`).once("value"),
+        db.ref(`comments/${teacherClass}/${currentYear}/${currentTerm}`).once("value")
+      ]);
+
+      const cbts = Object.entries(cbtSnap.val() || {}).map(([id, val]) => ({ ...val, id }))
+        .filter(cbt => cbt.published && cbt.class === teacherClass && cbt.year === currentYear && cbt.term === currentTerm);
+      const results = Object.values(resultSnap.val() || {});
+      const scores = scoreSnap.val() || {};
+      const existingComments = commentSnap.val() || {};
+
+      const students = new Set(), subjects = new Set(), scoreMap = {};
+
+      Object.entries(scores).forEach(([sub, typesObj]) => {
+        subjects.add(sub);
+        Object.entries(typesObj).forEach(([type, stuObj]) => {
+          Object.entries(stuObj).forEach(([student, val]) => {
+            students.add(student);
+            scoreMap[student] = scoreMap[student] || {};
+            scoreMap[student][sub] = scoreMap[student][sub] || {};
+            scoreMap[student][sub][type] = { doc: val };
+          });
+        });
+      });
+
+      results.forEach(res => {
+        const cbt = cbts.find(c => c.id === res.cbtId);
+        if (!cbt) return;
+        const { student } = res;
+        const answers = res.answers || [];
+        let correct = 0;
+        cbt.questions.forEach((q, i) => {
+          if ((answers[i] || "").toLowerCase() === (q.answer || "").toLowerCase()) correct++;
+        });
+        const raw = (correct / cbt.questions.length) * 100;
+
+        students.add(student);
+        subjects.add(cbt.subject);
+        scoreMap[student] = scoreMap[student] || {};
+        scoreMap[student][cbt.subject] = scoreMap[student][cbt.subject] || {};
+        scoreMap[student][cbt.subject][cbt.type] = scoreMap[student][cbt.subject][cbt.type] || {};
+        scoreMap[student][cbt.subject][cbt.type].cbt = raw;
+      });
+
+      const subjectList = Array.from(subjects).sort();
+      let html = `<table><thead><tr><th class="sticky-col sticky-head">Student</th>`;
+      subjectList.forEach(s => html += `<th>${s} Total</th>`);
+      html += `<th>Overall Total</th><th>Average</th><th>Comment</th></tr></thead><tbody>`;
+
+      let totalAvg = 0, count = 0;
+
+      Array.from(students).sort().forEach(student => {
+        html += `<tr><td class="sticky-col">${student}</td>`;
+        let overall = 0, subjCount = 0;
+
+        subjectList.forEach(sub => {
+          let subTotal = 0;
+          types.forEach(type => {
+            const doc = scoreMap[student]?.[sub]?.[type]?.doc ?? null;
+            const cbt = scoreMap[student]?.[sub]?.[type]?.cbt ?? null;
+            let avg = doc !== null && cbt !== null ? (doc + cbt) / 2 : doc ?? cbt ?? 0;
+            subTotal += (avg * weight[type]) / 100;
+          });
+          html += `<td>${subTotal.toFixed(1)}</td>`;
+          if (subTotal > 0) { overall += subTotal; subjCount++; }
+        });
+
+        const avg = subjCount ? (overall / subjCount).toFixed(2) : "0.00";
+        totalAvg += parseFloat(avg); count++;
+        const comment = existingComments[student]?.text || "";
+        html += `<td>${overall.toFixed(1)}</td><td>${avg}</td><td><textarea data-student="${student}">${comment}</textarea></td></tr>`;
+      });
+
+      html += '</tbody></table>';
+      document.getElementById("commentsContainer").innerHTML = html;
+      document.getElementById("classAverage").innerText = `📘 Class Average: ${(totalAvg / count).toFixed(2)}`;
+      document.getElementById("saveMessage").innerText = "";
+    }
+
+    function saveComments() {
+      const textareas = document.querySelectorAll("textarea[data-student]");
+      const updates = {};
+      textareas.forEach(ta => {
+        const student = ta.dataset.student;
+        const comment = ta.value.trim();
+        updates[`comments/${teacherClass}/${currentYear}/${currentTerm}/${student}`] = { text: comment };
+      });
+
+      db.ref().update(updates, error => {
+        const msg = document.getElementById("saveMessage");
+        msg.innerText = error ? "❌ Failed to save comments." : "✅ Comments saved successfully!";
+      });
+    }
+  </script>
+</body>
+</html>
