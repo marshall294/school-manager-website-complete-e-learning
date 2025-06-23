@@ -112,7 +112,78 @@
       <h3>Uploaded Assessments</h3>
     </div>
   </div>
+<!-- 📝 Compact Google Docs Sample Button with Hover Instructions -->
+<style>
+  #docs-button-container {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 1000;
+  }
 
+  #docs-button {
+    background-color: #0b8043;
+    color: white;
+    padding: 12px;
+    border-radius: 50%;
+    font-size: 20px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #docs-info {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    left: 60px;
+    bottom: 0;
+    width: 260px;
+    background: white;
+    color: #333;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    border: 1px solid #ccc;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+
+  #docs-button-container:hover #docs-info {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  .label-text {
+    font-size: 11px;
+    position: absolute;
+    bottom: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #444;
+    font-weight: bold;
+    pointer-events: none;
+  }
+</style>
+
+<div id="docs-button-container">
+  <a href="https://docs.google.com/document/d/1W7Q4epA2wnegy9nigIvV3E1lwczkyAoDYMTT11xRXM0/copy" target="_blank" id="docs-button" title="Open Google Docs Sample">
+    📄
+  </a>
+  <div class="label-text">Sample</div>
+  <div id="docs-info">
+    <strong>Steps:</strong><br>
+    1. Click to open sample<br>
+    2. Make a copy<br>
+    3. Rename correctly<br>
+    4. Set sharing to "Anyone with link can edit"<br>
+    5. Copy your link and paste it where needed
+  </div>
+</div>
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
