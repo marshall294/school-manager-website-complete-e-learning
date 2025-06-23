@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Page Under Construction</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      color: white;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .container {
+      text-align: center;
+      max-width: 700px;
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+      animation: fadeIn 1.5s ease;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+    }
+
+    p {
+      font-size: 1.1rem;
+      margin-bottom: 2rem;
+    }
+
+    .button-group {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .button-3d {
+      background: linear-gradient(to right, #25D366, #128C7E);
+      padding: 1rem 2rem;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 12px;
+      color: white;
+      box-shadow: 0 6px 0 #0d3d2b;
+      cursor: pointer;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .button-3d.email {
+      background: linear-gradient(to right, #ff416c, #ff4b2b);
+      box-shadow: 0 6px 0 #991f2a;
+    }
+
+    .button-3d:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    .glow {
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, #00ffcc55, transparent 70%);
+      top: -100px;
+      right: -100px;
+      animation: pulse 4s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.7; }
+      50% { transform: scale(1.2); opacity: 0.4; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="glow"></div>
+
+  <div class="container">
+    <h1>🚧 Page Not Ready Yet</h1>
+    <p>
+      But it will be — once you’re ready to bring your vision to life.  
+      We specialize in building stunning, professional school websites tailored exactly to your needs.
+    </p>
+
+    <div class="button-group">
+      <button class="button-3d" onclick="window.open('https://wa.me/2348102341648', '_blank')">💬 Chat on WhatsApp</button>
+      <button class="button-3d email" onclick="window.location.href='mailto:marshall12340@gmail.com'">📧 Email Us</button>
+    </div>
+
+    <p style="margin-top: 2rem; font-style: italic; font-weight: 600;">We’re here to take your school business to the climax 🚀</p>
+  </div>
+</body>
+</html>
