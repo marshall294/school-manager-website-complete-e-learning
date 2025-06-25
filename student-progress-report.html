@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student Progress Report</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f4f8fc;
+      color: #333;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #004080;
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+    }
+    .student-info {
+      font-size: 1.1em;
+    }
+    .profile-pic {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid #fff;
+    }
+    .summary {
+      margin-top: 30px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: space-around;
+    }
+    .summary-box {
+      background: #ffffff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+      border-left: 6px solid #004080;
+      border-radius: 10px;
+      padding: 20px;
+      flex: 1;
+      min-width: 200px;
+      text-align: center;
+      font-size: 1.2em;
+    }
+    .summary-box strong {
+      font-size: 1.5em;
+      color: #004080;
+    }
+    .motivation {
+      margin-top: 30px;
+      padding: 20px;
+      border-left: 6px solid green;
+      background-color: #e6ffe6;
+      border-radius: 10px;
+      font-style: italic;
+      font-size: 1.1em;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="student-info" id="studentInfo"></div>
+    <img src="" id="studentPic" class="profile-pic" alt="Student Picture">
+  </header>
+
+  <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+    <label>
+      Term:
+      <select id="termSelect"></select>
+    </label>
+    <label>
+      Session:
+      <select id="yearSelect"></select>
+    </label>
+  </div>
+
+  <div class="summary">
+    <div class="summary-box" id="classAvg"></div>
+    <div class="summary-box" id="studentAvg"></div>
+    <div class="summary-box" id="gradeBox"></div>
+  </div>
+
+  <div class="motivation" id="motivationMsg"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+      authDomain: "school-6425b.firebaseapp.com",
+      databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+      projectId: "school-6425b",
+      storageBucket: "school-6425b.appspot.com",
+      messagingSenderId: "929265479935",
+      appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const weight = { "CA 1": 20, "CA 2": 20, "Project": 10, "Assignment": 10, "Examination": 40 };
+
+    const motivationMessages = {
+      A: [
+        name => `Fantastic job, ${name}! You're a role model for your peers.`,
+        name => `Well done, ${name}! Your hard work truly paid off.`,
+        name => `Keep soaring high, ${name}! Excellence is your path.`
+      ],
+      B: [
+        name => `${name}, your performance is very good. With a little push, you'll be top!`,
+        name => `Nice work, ${name}! Just a bit more and you're at the top.`,
+        name => `${name}, you've done well. Don't settle — aim for the A!`
+      ],
+      C: [
+        name => `Good job, ${name}. Stay focused and aim for even better.`,
+        name => `${name}, this is a solid effort. Now strive to rise higher!`,
+        name => `Keep going, ${name}! You're on the right track.`
+      ],
+      D: [
+        name => `${name}, your results show potential. Let’s push harder!`,
+        name => `Don't lose hope, ${name}. Great things come with effort.`,
+        name => `${name}, improvement is within your reach. Stay determined.`
+      ],
+      F: [
+        name => `${name}, it's time to seek help and take action. You can do it.`,
+        name => `This is just the beginning, ${name}. Never give up on yourself.`,
+        name => `The results are low, ${name}, but your comeback can be strong. Believe.`
+      ]
+    };
+
+    auth.onAuthStateChanged(async user => {
+      if (!user) return location.href = "login.html";
+      const userSnap = await db.ref(`users/${user.uid}`).once("value");
+      const student = userSnap.val();
+      if (!student || student.role !== "student") return location.href = "dashboard.html";
+
+      document.getElementById("studentInfo").innerHTML = `
+        <strong>${student.name}</strong><br>
+        Class: ${student.class}
+      `;
+
+      const picSnap = await db.ref("pictures/" + user.uid).once("value");
+      document.getElementById("studentPic").src = picSnap.val()?.url || "";
+
+      const [resultSnap, scoreSnap, allScoreSnap] = await Promise.all([
+        db.ref("results").once("value"),
+        db.ref(`scores/${student.class}`).once("value"),
+        db.ref("scores").once("value")
+      ]);
+
+      const allResults = Object.values(resultSnap.val() || {}).filter(r => r.student === student.name);
+      const availableTerms = [...new Set(allResults.map(r => r.term || "First Term"))];
+      const availableYears = [...new Set(allResults.map(r => r.year || "2025-2026"))];
+
+      const termSelect = document.getElementById("termSelect");
+      const yearSelect = document.getElementById("yearSelect");
+
+      termSelect.innerHTML = availableTerms.map(t => `<option value="${t}">${t}</option>`).join('');
+      yearSelect.innerHTML = availableYears.map(y => `<option value="${y}">${y}</option>`).join('');
+
+      const loadData = (year, term) => {
+        const results = allResults.filter(r => r.term === term && r.year === year);
+        const scores = scoreSnap.val() || {};
+        const allScores = allScoreSnap.val() || {};
+        const scoreMap = {};
+        const subjects = new Set();
+
+        results.forEach(res => {
+          const { subject, type, score } = res;
+          if (!subject || !type || score == null) return;
+          if (!scoreMap[subject]) scoreMap[subject] = {};
+          scoreMap[subject][type] = { cbt: score };
+          subjects.add(subject);
+        });
+
+        Object.entries(scores).forEach(([subject, typeObj]) => {
+          Object.entries(typeObj).forEach(([type, stuObj]) => {
+            const val = stuObj[student.name];
+            if (val != null) {
+              if (!scoreMap[subject]) scoreMap[subject] = {};
+              if (!scoreMap[subject][type]) scoreMap[subject][type] = {};
+              scoreMap[subject][type].doc = val;
+              subjects.add(subject);
+            }
+          });
+        });
+
+        let totalSum = 0, count = 0;
+        Array.from(subjects).forEach(subject => {
+          let subjectTotal = 0;
+          Object.keys(weight).forEach(type => {
+            const doc = scoreMap[subject]?.[type]?.doc ?? null;
+            const cbt = scoreMap[subject]?.[type]?.cbt ?? null;
+            let avgRaw = doc != null && cbt != null ? (doc + cbt) / 2 : (doc ?? cbt ?? 0);
+            const weighted = (avgRaw * weight[type]) / 100;
+            subjectTotal += weighted;
+          });
+          totalSum += subjectTotal;
+          count++;
+        });
+
+        const average = count ? (totalSum / count).toFixed(2) : "0.00";
+        document.getElementById("studentAvg").innerHTML = `Your Average Score<br><strong>${average}</strong>`;
+
+        let totalClass = 0, studentCount = 0;
+        Object.values(allScores[student.class] || {}).forEach(subjectObj => {
+          Object.values(subjectObj).forEach(typeObj => {
+            Object.values(typeObj).forEach(score => {
+              totalClass += score;
+              studentCount++;
+            });
+          });
+        });
+
+        const classAvg = studentCount ? (totalClass / studentCount).toFixed(2) : "0.00";
+        document.getElementById("classAvg").innerHTML = `Class Average<br><strong>${classAvg}</strong>`;
+
+        const grade = average >= 70 ? "A" : average >= 60 ? "B" : average >= 50 ? "C" : average >= 45 ? "D" : "F";
+        document.getElementById("gradeBox").innerHTML = `Grade<br><strong>${grade}</strong>`;
+
+        const messageOptions = motivationMessages[grade];
+        const randomIndex = Math.floor(Math.random() * messageOptions.length);
+        const personalizedMessage = messageOptions[randomIndex](student.name);
+        document.getElementById("motivationMsg").textContent = personalizedMessage;
+      };
+
+      termSelect.onchange = () => loadData(yearSelect.value, termSelect.value);
+      yearSelect.onchange = () => loadData(yearSelect.value, termSelect.value);
+
+      loadData(availableYears[0], availableTerms[0]);
+    });
+  </script>
+</body>
+</html>
