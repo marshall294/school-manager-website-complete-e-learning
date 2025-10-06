@@ -14,7 +14,90 @@
   <div class="max-w-5xl mx-auto py-10 px-4">
     <h1 class="text-3xl font-bold text-center text-blue-700 mb-6">Teacher — Manage Theory Assessments</h1>
 
-    <!-- Form -->
+    <!-- CBT Upload Section -->
+    <div class="bg-white rounded shadow p-6 mb-8">
+      <h2 class="text-xl font-semibold text-blue-600 mb-4">Upload CBT</h2>
+      <div class="space-y-3">
+        <label>Academic Year</label>
+        <select id="cbtYear" class="w-full p-2 border rounded">
+          <option value="2025-2026">2025–2026</option>
+          <option value="2026-2027">2026–2027</option>
+          <option value="2027-2028">2027–2028</option>
+          <option value="2028-2029">2028–2029</option>
+          <option value="2029-2030">2029–2030</option>
+        </select>
+
+        <label>Term</label>
+        <select id="cbtTerm" class="w-full p-2 border rounded">
+          <option value="First Term">First Term</option>
+          <option value="Second Term">Second Term</option>
+          <option value="Third Term">Third Term</option>
+        </select>
+
+        <label>Class</label>
+        <select id="cbtClass" class="w-full p-2 border rounded" disabled></select>
+
+        <label>Subject</label>
+        <select id="cbtSubject" class="w-full p-2 border rounded">
+          <option>Science</option><option>Home Economics</option><option>Geography</option>
+          <option>Agricultural Science</option><option>Mathematics</option><option>Civic Education</option>
+          <option>English Studies</option><option>History</option><option>Christian Religious Studies</option>
+          <option>Islam Religious Studies</option><option>Information and Communication Technology</option>
+          <option>Personal Social and Health Education</option><option>General Knowledge</option>
+        </select>
+
+        <label>Exam Type</label>
+        <select id="cbtType" class="w-full p-2 border rounded">
+          <option value="CA 1">CA 1</option>
+          <option value="CA 2">CA 2</option>
+          <option value="Examination">Examination</option>
+          <option value="Homework">Homework</option>
+          <option value="Project">Project</option>
+        </select>
+
+        <input type="file" id="excelFile" accept=".xlsx, .xls" class="w-full border rounded p-2"/>
+        <button onclick="handleUpload()" class="bg-green-600 text-white px-4 py-2 rounded">Upload CBT</button>
+      </div>
+    </div>
+
+    <!-- Filter Form -->
+    <div class="bg-white rounded shadow p-6 mb-8">
+      <h3 class="text-xl font-semibold text-blue-600 mb-4">Filter CBT History</h3>
+      <div class="flex flex-wrap gap-3">
+        <select id="filterYear" class="border p-2 rounded">
+          <option value="">All Years</option>
+          <option value="2025-2026">2025–2026</option>
+          <option value="2026-2027">2026–2027</option>
+          <option value="2027-2028">2027–2028</option>
+          <option value="2028-2029">2028–2029</option>
+          <option value="2029-2030">2029–2030</option>
+        </select>
+        <select id="filterTerm" class="border p-2 rounded">
+          <option value="">All Terms</option>
+          <option value="First Term">First Term</option>
+          <option value="Second Term">Second Term</option>
+          <option value="Third Term">Third Term</option>
+        </select>
+        <select id="filterSubject" class="border p-2 rounded">
+          <option value="">All Subjects</option>
+          <option>Science</option><option>Home Economics</option><option>Geography</option>
+          <option>Agricultural Science</option><option>Mathematics</option><option>Civic Education</option>
+          <option>English Studies</option><option>History</option><option>Christian Religious Studies</option>
+          <option>Islam Religious Studies</option><option>Information and Communication Technology</option>
+          <option>Personal Social and Health Education</option><option>General Knowledge</option>
+        </select>
+        <select id="filterType" class="border p-2 rounded">
+          <option value="">All Types</option>
+          <option value="CA 1">CA 1</option>
+          <option value="CA 2">CA 2</option>
+          <option value="Examination">Examination</option>
+          <option value="Homework">Homework</option>
+          <option value="Project">Project</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Theory Assessment Form -->
     <div class="bg-white rounded shadow p-6 mb-8">
       <h2 class="text-xl font-semibold text-blue-600 mb-4">Create New Assessment</h2>
       <form id="theoryForm" class="space-y-3">
@@ -63,6 +146,8 @@
       </div>
     </div>
   </div>
+</body>
+
 
   <script>
     // --- Firebase setup ---
@@ -209,3 +294,4 @@
   </script>
 </body>
 </html>
+
