@@ -1,34 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Teacher – Grade Submissions</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teacher – Grade Submissions | Bright Future Academy</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen p-6">
+
   <!-- Header -->
   <div class="flex items-center justify-between mb-6">
-    <div class="flex items-center space-x-4">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/4/4a/Logo_2013_Google.png" class="h-14" alt="Logo">
-      <div>
-        <h1 class="text-2xl font-bold">Bright Future Academy</h1>
-        <p class="text-gray-600">Teacher Grading Dashboard</p>
-      </div>
-    </div>
     <div>
-      <button id="logoutBtn" class="bg-red-600 text-white px-4 py-2 rounded">Logout</button>
+      <h1 class="text-2xl font-bold">Bright Future Academy</h1>
+      <p class="text-gray-600">Teacher Grading Dashboard</p>
     </div>
+    <button id="logoutBtn" class="bg-red-600 text-white px-4 py-2 rounded">Logout</button>
   </div>
 
-  <!-- Filters -->
-  <div class="flex space-x-4 mb-4">
-    <select id="filterTerm" class="border p-2 rounded"><option value="">All Terms</option></select>
-    <select id="filterSubject" class="border p-2 rounded"><option value="">All Subjects</option></select>
-    <select id="filterAssessment" class="border p-2 rounded"><option value="">All Assessments</option></select>
+  <!-- Filters (Populated Dynamically) -->
+  <div class="bg-white p-4 rounded shadow mb-6">
+    <h2 class="font-semibold mb-3">Filter assessments</h2>
+    <div class="flex flex-wrap gap-3">
+      <select id="filterYear" class="border p-2 rounded" aria-label="Filter by year">
+        <option value="">All Years</option>
+      </select>
+
+      <select id="filterSubject" class="border p-2 rounded" aria-label="Filter by subject">
+        <option value="">All Subjects</option>
+      </select>
+
+      <select id="filterTerm" class="border p-2 rounded" aria-label="Filter by term">
+        <option value="">All Terms</option>
+      </select>
+
+      <button id="clearFilters" class="bg-gray-200 px-3 py-2 rounded">Clear</button>
+    </div>
   </div>
 
   <!-- Table -->
@@ -38,6 +47,7 @@
         <tr class="bg-gray-200 text-left">
           <th class="p-3 border">Student</th>
           <th class="p-3 border">Class</th>
+          <th class="p-3 border">Year</th>
           <th class="p-3 border">Subject</th>
           <th class="p-3 border">Term</th>
           <th class="p-3 border">Assessment</th>
@@ -65,7 +75,7 @@
   </div>
 
   <script>
-    // ✅ Firebase Config
+    // --- Firebase Config ---
     const firebaseConfig = {
       apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
       authDomain: "school-6425b.firebaseapp.com",
@@ -79,15 +89,16 @@
     const auth = firebase.auth();
     const db = firebase.database();
 
-    // DOM Refs
+    // DOM references
     const submissionsTable = document.getElementById("submissionsTable");
     const gradingModal = document.getElementById("gradingModal");
     const gradingContent = document.getElementById("gradingContent");
     const closeModalBtn = document.getElementById("closeModal");
     const saveScoresBtn = document.getElementById("saveScores");
+    const filterYear = document.getElementById("filterYear");
     const filterTerm = document.getElementById("filterTerm");
     const filterSubject = document.getElementById("filterSubject");
-    const filterAssessment = document.getElementById("filterAssessment");
+    const clearFiltersBtn = document.getElementById("clearFilters");
     const avgDisplay = document.getElementById("avgDisplay");
 
     let teacherClass = "";
@@ -96,33 +107,31 @@
 
     // Logout
     document.getElementById("logoutBtn").addEventListener("click", () => {
-      auth.signOut().then(() => (window.location.href = "login.html"));
+      auth.signOut().then(() => window.location.href = "login.html");
     });
 
     // Auth
-    auth.onAuthStateChanged(async (user) => {
-      if (!user) return (window.location.href = "login.html");
+    auth.onAuthStateChanged(async user => {
+      if (!user) return window.location.href = "login.html";
 
       const snap = await db.ref(`users/${user.uid}`).once("value");
       const teacher = snap.val();
       if (!teacher || teacher.role !== "teacher") {
         alert("Access denied.");
-        return (window.location.href = "dashboard.html");
+        return window.location.href = "dashboard.html";
       }
 
       teacherClass = teacher.class || "";
       loadSubmissions();
     });
 
-    // 🔹 Load Submissions for Teacher’s Class
+    // Load submissions
     async function loadSubmissions() {
-      submissionsTable.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-500">Loading...</td></tr>`;
+      submissionsTable.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-gray-500">Loading...</td></tr>`;
       const theorySnap = await db.ref("theorySubmissions").once("value");
       const data = theorySnap.val() || {};
 
       allSubmissions = [];
-
-      // Flatten nested submissions
       Object.entries(data).forEach(([assessmentId, studentSubs]) => {
         Object.entries(studentSubs).forEach(([uid, sub]) => {
           if (sub.studentClass === teacherClass) {
@@ -132,7 +141,7 @@
       });
 
       if (!allSubmissions.length) {
-        submissionsTable.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-500">No submissions found for your class.</td></tr>`;
+        submissionsTable.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-gray-500">No submissions found for your class.</td></tr>`;
         return;
       }
 
@@ -140,15 +149,15 @@
       renderSubmissions();
     }
 
-    // 🔹 Populate Filters
+    // Populate filters
     function populateFilters() {
-      const terms = [...new Set(allSubmissions.map((s) => s.term))];
-      const subjects = [...new Set(allSubmissions.map((s) => s.subject))];
-      const assessments = [...new Set(allSubmissions.map((s) => s.assessmentName))];
+      const years = [...new Set(allSubmissions.map(s => s.year))];
+      const terms = [...new Set(allSubmissions.map(s => s.term))];
+      const subjects = [...new Set(allSubmissions.map(s => s.subject))];
 
+      fillDropdown(filterYear, years);
       fillDropdown(filterTerm, terms);
       fillDropdown(filterSubject, subjects);
-      fillDropdown(filterAssessment, assessments);
     }
 
     function fillDropdown(select, items) {
@@ -156,22 +165,22 @@
         items.map(v => `<option value="${v}">${v}</option>`).join("");
     }
 
-    // 🔹 Render Table
+    // Render table
     function renderSubmissions() {
+      const year = filterYear.value;
       const term = filterTerm.value;
       const subject = filterSubject.value;
-      const assess = filterAssessment.value;
 
-      const filtered = allSubmissions.filter(s => 
+      const filtered = allSubmissions.filter(s =>
+        (!year || s.year === year) &&
         (!term || s.term === term) &&
-        (!subject || s.subject === subject) &&
-        (!assess || s.assessmentName === assess)
+        (!subject || s.subject === subject)
       );
 
       submissionsTable.innerHTML = "";
 
       if (!filtered.length) {
-        submissionsTable.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-500">No matching submissions.</td></tr>`;
+        submissionsTable.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-gray-500">No matching submissions.</td></tr>`;
         avgDisplay.innerHTML = "";
         return;
       }
@@ -183,6 +192,7 @@
         tr.innerHTML = `
           <td class="p-3 border">${sub.studentName}</td>
           <td class="p-3 border">${sub.studentClass}</td>
+          <td class="p-3 border">${sub.year || '-'}</td>
           <td class="p-3 border">${sub.subject}</td>
           <td class="p-3 border">${sub.term}</td>
           <td class="p-3 border">${sub.assessmentName}</td>
@@ -200,7 +210,7 @@
       attachGradeEvents();
     }
 
-    // 🔹 Grade Button
+    // Grade buttons
     function attachGradeEvents() {
       document.querySelectorAll(".gradeBtn").forEach(btn => {
         btn.addEventListener("click", async () => {
@@ -214,7 +224,7 @@
       });
     }
 
-    // 🔹 Modal
+    // Modal
     function openGradingModal(sub) {
       gradingContent.innerHTML = sub.answers.map((a, i) => `
         <div class="mb-4">
@@ -228,7 +238,7 @@
       gradingModal.classList.remove("hidden");
     }
 
-    // 🔹 Save Scores
+    // Save scores
     saveScoresBtn.addEventListener("click", async () => {
       const inputs = gradingContent.querySelectorAll(".scoreInput");
       let total = 0;
@@ -251,8 +261,14 @@
 
     closeModalBtn.addEventListener("click", () => gradingModal.classList.add("hidden"));
 
-    // Filters
-    [filterTerm, filterSubject, filterAssessment].forEach(sel => sel.addEventListener("change", renderSubmissions));
+    // Filter events
+    [filterYear, filterTerm, filterSubject].forEach(sel => sel.addEventListener("change", renderSubmissions));
+    clearFiltersBtn.addEventListener("click", () => {
+      filterYear.value = "";
+      filterTerm.value = "";
+      filterSubject.value = "";
+      renderSubmissions();
+    });
   </script>
 </body>
 </html>
