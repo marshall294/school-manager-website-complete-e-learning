@@ -2,122 +2,76 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mark Theory Assessment</title>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      margin: 0;
-      padding: 0;
-      background: #f8f9fa;
-    }
-    header {
-      background-color: #003366;
-      color: white;
-      padding: 20px;
-      text-align: center;
-      font-size: 22px;
-    }
-    nav {
-      background-color: #d0e3ff;
-      padding: 12px 20px;
-      text-align: center;
-    }
-    nav a {
-      color: #003366;
-      text-decoration: none;
-      font-weight: bold;
-      font-size: 16px;
-      margin: 0 15px;
-    }
-    nav a:hover {
-      text-decoration: underline;
-    }
-    .container {
-      max-width: 1000px;
-      margin: 2rem auto;
-      background: white;
-      padding: 1.5rem;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    h2 {
-      text-align: center;
-      color: #003366;
-    }
-    label {
-      font-weight: bold;
-    }
-    select, input, button {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      font-size: 1rem;
-    }
-    button {
-      background-color: #007bff;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background-color: #f2f2f2;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teacher - Grade Submissions</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
-<body>
-  <header>Mark Theory Assessments | ORLI International Academy</header>
-  <nav>
-    <a href="theory-result.html">📘 Theory BROADSHEET</a>
-  </nav>
+<body class="bg-gray-100 min-h-screen p-6">
 
-  <div class="container">
-    <h2>Mark Theory Assessments</h2>
-    <label for="filterYear">Academic Year</label>
-    <select id="filterYear"></select>
+  <!-- 🔹 Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center space-x-4">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/4/4a/Logo_2013_Google.png" alt="School Logo" class="h-14">
+      <div>
+        <h1 class="text-2xl font-bold">Bright Future Academy</h1>
+        <p class="text-gray-600">Theory Assessment Marking</p>
+      </div>
+    </div>
+    <p class="text-gray-500 text-sm">Academic Year: 2025</p>
+  </div>
 
-    <label for="filterTerm">Term</label>
-    <select id="filterTerm"></select>
+  <!-- 🔹 Filters -->
+  <div class="flex space-x-4 mb-4">
+    <select id="filterTerm" class="border p-2 rounded">
+      <option value="">All Terms</option>
+    </select>
+    <select id="filterSubject" class="border p-2 rounded">
+      <option value="">All Subjects</option>
+    </select>
+    <select id="filterAssessment" class="border p-2 rounded">
+      <option value="">All Assessments</option>
+    </select>
+  </div>
 
-    <label for="filterSubject">Subject</label>
-    <select id="filterSubject"></select>
-
-    <label for="filterType">Assessment Type</label>
-    <select id="filterType"></select>
-
-    <div id="assessmentInfo"></div>
-    <table id="scoreTable" style="display:none">
+  <!-- 🔹 Submissions Table -->
+  <div class="bg-white rounded shadow overflow-x-auto">
+    <table class="min-w-full border-collapse">
       <thead>
-        <tr>
-          <th>Student Name</th>
-          <th>Submission Link</th>
-          <th>Score</th>
-          <th>Action</th>
+        <tr class="bg-gray-200 text-left">
+          <th class="p-3 border">Student</th>
+          <th class="p-3 border">Class</th>
+          <th class="p-3 border">Subject</th>
+          <th class="p-3 border">Term</th>
+          <th class="p-3 border">Assessment</th>
+          <th class="p-3 border">Status</th>
+          <th class="p-3 border">Score</th>
+          <th class="p-3 border">Action</th>
         </tr>
       </thead>
-      <tbody></tbody>
+      <tbody id="submissionsTable"></tbody>
     </table>
   </div>
 
+  <!-- 🔹 Average Display -->
+  <div id="avgDisplay" class="mt-4"></div>
+
+  <!-- 🔹 Grading Modal -->
+  <div id="gradingModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-white p-6 rounded shadow-lg w-2/3 max-h-[90vh] overflow-y-auto">
+      <h2 class="text-xl font-bold mb-4">Grade Submission</h2>
+      <div id="gradingContent"></div>
+      <div class="mt-4 flex justify-end">
+        <button id="closeModal" class="bg-gray-500 text-white px-4 py-2 rounded mr-2">Cancel</button>
+        <button id="saveScores" class="bg-green-600 text-white px-4 py-2 rounded">Save Scores</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    // --- Firebase setup ---
     const firebaseConfig = {
       apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
       authDomain: "school-6425b.firebaseapp.com",
@@ -127,121 +81,144 @@
       messagingSenderId: "929265479935",
       appId: "1:929265479935:web:af45ea5968ee50258a1cca"
     };
+
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
     const auth = firebase.auth();
+    const db = firebase.database();
+
+    // DOM elements
+    const submissionsTable = document.getElementById("submissionsTable");
+    const filterTerm = document.getElementById("filterTerm");
+    const filterSubject = document.getElementById("filterSubject");
+    const filterAssessment = document.getElementById("filterAssessment");
+    const gradingModal = document.getElementById("gradingModal");
+    const gradingContent = document.getElementById("gradingContent");
+    const closeModalBtn = document.getElementById("closeModal");
+    const saveScoresBtn = document.getElementById("saveScores");
+    const avgDisplay = document.getElementById("avgDisplay");
 
     let teacherClass = "";
+    let allSubmissions = [];
+    let currentDocId = "";
+    let currentAnswers = [];
 
+    // --- Auth check ---
     auth.onAuthStateChanged(user => {
       if (!user) return location.href = 'login.html';
-      db.ref(`users/${user.uid}`).once("value").then(snap => {
-        const data = snap.val();
-        if (!data || data.role !== 'teacher') {
-          alert("Access denied. Only class teachers can view this page.");
-          return location.href = 'dashboard.html';
-        }
+      db.ref(`users/${user.uid}`).once('value').then(snap => {
+        const data = snap.val() || {};
+        if (data.role !== 'teacher') return alert('Access denied');
         teacherClass = data.class;
-        loadData();
+        loadSubmissions();
       });
     });
 
-    function loadData() {
-      const yearSel = document.getElementById("filterYear");
-      const termSel = document.getElementById("filterTerm");
-      const subjectSel = document.getElementById("filterSubject");
-      const typeSel = document.getElementById("filterType");
-
-      let allDocs = [];
-      let savedScores = {};
-
-      db.ref("docAssessments").once("value").then(snap => {
+    // --- Load Submissions ---
+    function loadSubmissions() {
+      db.ref("theorySubmissions").on("value", snap => {
+        allSubmissions = [];
         snap.forEach(child => {
-          const item = child.val();
-          if (item.published && item.class === teacherClass) allDocs.push(item);
+          const val = child.val();
+          if (val.class === teacherClass) {
+            allSubmissions.push({ id: child.key, ...val });
+          }
         });
-        populateDropdown(yearSel, Array.from(new Set(allDocs.map(d => d.year))));
-
-        yearSel.onchange = () => {
-          const filtered = allDocs.filter(d => d.year === yearSel.value);
-          populateDropdown(termSel, Array.from(new Set(filtered.map(d => d.term))));
-          clearDropdowns([subjectSel, typeSel]);
-        };
-        termSel.onchange = () => {
-          const filtered = allDocs.filter(d => d.year === yearSel.value && d.term === termSel.value);
-          populateDropdown(subjectSel, Array.from(new Set(filtered.map(d => d.subject))));
-          clearDropdowns([typeSel]);
-        };
-        subjectSel.onchange = () => {
-          const filtered = allDocs.filter(d => d.year === yearSel.value && d.term === termSel.value && d.subject === subjectSel.value);
-          populateDropdown(typeSel, Array.from(new Set(filtered.map(d => d.type))));
-        };
-        typeSel.onchange = () => loadTable(allDocs);
+        populateFilters();
+        renderTable();
       });
+    }
 
-      function populateDropdown(select, items) {
-        select.innerHTML = '<option value="">Select</option>';
-        items.forEach(i => {
-          const opt = document.createElement("option");
-          opt.value = opt.textContent = i;
-          select.appendChild(opt);
-        });
+    // --- Populate Filters ---
+    function populateFilters() {
+      const terms = [...new Set(allSubmissions.map(s => s.term))];
+      const subjects = [...new Set(allSubmissions.map(s => s.subject))];
+      const assessments = [...new Set(allSubmissions.map(s => s.assessmentName))];
+
+      fillSelect(filterTerm, terms);
+      fillSelect(filterSubject, subjects);
+      fillSelect(filterAssessment, assessments);
+    }
+
+    function fillSelect(select, items) {
+      const current = select.value;
+      select.innerHTML = `<option value="">All</option>` + items.map(v => `<option ${v === current ? 'selected' : ''}>${v}</option>`).join("");
+    }
+
+    // --- Render Table ---
+    function renderTable() {
+      submissionsTable.innerHTML = "";
+      const filtered = allSubmissions.filter(s =>
+        (!filterTerm.value || s.term === filterTerm.value) &&
+        (!filterSubject.value || s.subject === filterSubject.value) &&
+        (!filterAssessment.value || s.assessmentName === filterAssessment.value)
+      );
+
+      if (!filtered.length) {
+        submissionsTable.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-500">No submissions found</td></tr>`;
+        avgDisplay.innerHTML = "";
+        return;
       }
-      function clearDropdowns(list) {
-        list.forEach(sel => sel.innerHTML = '<option value="">Select</option>');
-      }
 
-      function loadTable(allDocs) {
-        const year = yearSel.value, term = termSel.value, subject = subjectSel.value, type = typeSel.value;
-        if (!year || !term || !subject || !type) return;
-
-        const match = allDocs.find(d => d.year === year && d.term === term && d.subject === subject && d.type === type);
-        if (!match) return alert("No matching assessment.");
-
-        document.getElementById("assessmentInfo").innerHTML = `
-          <p><strong>Class:</strong> ${match.class}</p>
-          <p><strong>Year:</strong> ${year}</p>
-          <p><strong>Term:</strong> ${term}</p>
-          <p><strong>Subject:</strong> ${subject}</p>
-          <p><strong>Type:</strong> ${type}</p>
+      let total = 0, graded = 0;
+      filtered.forEach(sub => {
+        if (sub.graded) { total += sub.totalScore || 0; graded++; }
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td class="p-3 border font-medium">${sub.studentName}</td>
+          <td class="p-3 border">${sub.class}</td>
+          <td class="p-3 border">${sub.subject}</td>
+          <td class="p-3 border">${sub.term}</td>
+          <td class="p-3 border">${sub.assessmentName}</td>
+          <td class="p-3 border ${sub.graded ? 'text-green-600' : 'text-red-600'}">${sub.graded ? '✅ Graded' : '📝 Pending'}</td>
+          <td class="p-3 border font-semibold">${sub.totalScore ?? '-'}</td>
+          <td class="p-3 border"><button class="bg-indigo-600 text-white px-3 py-1 rounded" onclick="grade('${sub.id}')">Mark</button></td>
         `;
-
-        const tbody = document.querySelector("#scoreTable tbody");
-        tbody.innerHTML = "";
-
-        db.ref(`scores/${match.class}/${subject}/${type}`).once("value").then(scoreSnap => {
-          savedScores = scoreSnap.val() || {};
-
-          db.ref(`submissions/${match.class}/${subject}`).once("value", snap => {
-            if (!snap.exists()) return alert("No submissions.");
-            snap.forEach(child => {
-              const name = child.key;
-              const link = child.val().link || child.val();
-              const previousScore = savedScores[name] || "";
-
-              const tr = document.createElement("tr");
-              tr.innerHTML = `
-                <td>${name}</td>
-                <td><a href="${link}" target="_blank">View</a></td>
-                <td><input type="number" id="score-${name}" value="${previousScore}" placeholder="Score"/></td>
-                <td><button onclick="saveScore('${match.class}', '${subject}', '${type}', '${name}')">Save</button></td>
-              `;
-              tbody.appendChild(tr);
-            });
-            document.getElementById("scoreTable").style.display = "table";
-          });
-        });
-      }
-    }
-
-    function saveScore(cls, subject, type, name) {
-      const input = document.getElementById(`score-${name}`);
-      const score = input.value.trim();
-      if (!score) return alert("Enter score.");
-      firebase.database().ref(`scores/${cls}/${subject}/${type}/${name}`).set(Number(score)).then(() => {
-        alert("Score saved");
+        submissionsTable.appendChild(row);
       });
+
+      const avg = graded ? (total / graded).toFixed(2) : '-';
+      avgDisplay.innerHTML = `<p class="bg-gray-100 p-2 rounded mt-2">Average Score: <b>${avg}</b></p>`;
     }
+
+    // --- Grade Submission ---
+    window.grade = id => {
+      const sub = allSubmissions.find(s => s.id === id);
+      if (!sub) return;
+      currentDocId = id;
+      currentAnswers = sub.answers || [];
+      gradingContent.innerHTML = currentAnswers.map((a, i) => `
+        <div class="mb-3">
+          <p class="font-semibold">Q${i+1}: ${a.question}</p>
+          <p class="ml-2 text-gray-700">Ans: ${a.answer}</p>
+          <input type="number" min="0" max="${a.expectedScore}" value="${a.score ?? ''}" data-idx="${i}" class="scoreInput border rounded px-2 py-1 w-24 mt-1">
+          <span class="ml-2 text-sm text-gray-500">Max: ${a.expectedScore}</span>
+        </div>
+      `).join('');
+      gradingModal.classList.remove("hidden");
+    };
+
+    // --- Save Scores ---
+    saveScoresBtn.addEventListener("click", () => {
+      const inputs = gradingContent.querySelectorAll(".scoreInput");
+      let total = 0;
+      inputs.forEach(inp => {
+        const idx = +inp.dataset.idx;
+        const score = Number(inp.value) || 0;
+        currentAnswers[idx].score = score;
+        total += score;
+      });
+      db.ref(`theorySubmissions/${currentDocId}`).update({
+        graded: true,
+        totalScore: total,
+        answers: currentAnswers
+      });
+      gradingModal.classList.add("hidden");
+    });
+
+    closeModalBtn.addEventListener("click", () => gradingModal.classList.add("hidden"));
+
+    // --- Filter Events ---
+    [filterTerm, filterSubject, filterAssessment].forEach(f => f.addEventListener("change", renderTable));
   </script>
 </body>
 </html>
