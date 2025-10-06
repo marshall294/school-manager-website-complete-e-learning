@@ -79,215 +79,235 @@
     </div>
   </div>
 
-  <script>
-    // Firebase Setup
-    const firebaseConfig = {
-      apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
-      authDomain: "school-6425b.firebaseapp.com",
-      databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
-      projectId: "school-6425b",
-      storageBucket: "school-6425b.appspot.com",
-      messagingSenderId: "929265479935",
-      appId: "1:929265479935:web:af45ea5968ee50258a1cca"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
+<script>
+  // Firebase Setup
+  const firebaseConfig = {
+    apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+    authDomain: "school-6425b.firebaseapp.com",
+    databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+    projectId: "school-6425b",
+    storageBucket: "school-6425b.appspot.com",
+    messagingSenderId: "929265479935",
+    appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
 
-    // DOM References
-    const submissionsTable = document.getElementById("submissionsTable");
-    const gradingModal = document.getElementById("gradingModal");
-    const gradingContent = document.getElementById("gradingContent");
-    const closeModalBtn = document.getElementById("closeModal");
-    const saveScoresBtn = document.getElementById("saveScores");
-    const filterYear = document.getElementById("filterYear");
-    const filterTerm = document.getElementById("filterTerm");
-    const filterSubject = document.getElementById("filterSubject");
-    const filterType = document.getElementById("filterType");
-    const avgDisplay = document.getElementById("avgDisplay");
-    const clearFiltersBtn = document.getElementById("clearFilters");
+  // DOM References
+  const submissionsTable = document.getElementById("submissionsTable");
+  const gradingModal = document.getElementById("gradingModal");
+  const gradingContent = document.getElementById("gradingContent");
+  const closeModalBtn = document.getElementById("closeModal");
+  const saveScoresBtn = document.getElementById("saveScores");
+  const filterYear = document.getElementById("filterYear");
+  const filterTerm = document.getElementById("filterTerm");
+  const filterSubject = document.getElementById("filterSubject");
+  const filterType = document.getElementById("filterType");
+  const avgDisplay = document.getElementById("avgDisplay");
+  const clearFiltersBtn = document.getElementById("clearFilters");
 
-    let teacherClass = "", teacherYear = "";
-    let allSubmissions = [];
-    let currentSubmission = null;
+  let teacherClass = "", teacherYear = "";
+  let allSubmissions = [];
+  let currentSubmission = null;
 
-    // Logout
-    document.getElementById("logoutBtn").addEventListener("click", () => {
-      auth.signOut().then(() => window.location.href = "login.html");
-    });
+  // Logout
+  document.getElementById("logoutBtn").addEventListener("click", () => {
+    auth.signOut().then(() => window.location.href = "login.html");
+  });
 
-    // Auth
-    auth.onAuthStateChanged(async (user) => {
-      if (!user) return (window.location.href = "login.html");
+  // Auth
+  auth.onAuthStateChanged(async (user) => {
+    if (!user) return (window.location.href = "login.html");
 
-      const snap = await db.ref(`users/${user.uid}`).once("value");
-      const teacher = snap.val();
-      if (!teacher || teacher.role !== "teacher") {
-        alert("Access denied.");
-        return (window.location.href = "dashboard.html");
-      }
-
-      teacherClass = teacher.class || "";
-      teacherYear = teacher.year || "";
-
-      loadSubmissions();
-    });
-
-    // Load Submissions for Teacher’s Class
-    async function loadSubmissions() {
-      submissionsTable.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-gray-500">Loading...</td></tr>`;
-      const theorySnap = await db.ref("theorySubmissions").once("value");
-      const data = theorySnap.val() || {};
-
-      allSubmissions = [];
-
-      Object.entries(data).forEach(([assessmentId, studentSubs]) => {
-        Object.entries(studentSubs).forEach(([uid, sub]) => {
-          if (sub.studentClass === teacherClass) {
-            allSubmissions.push({ ...sub, assessmentId });
-          }
-        });
-      });
-
-      if (!allSubmissions.length) {
-        submissionsTable.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-gray-500">No submissions found for your class.</td></tr>`;
-        return;
-      }
-
-      populateFilters();
-      renderSubmissions();
+    const snap = await db.ref(`users/${user.uid}`).once("value");
+    const teacher = snap.val();
+    if (!teacher || teacher.role !== "teacher") {
+      alert("Access denied.");
+      return (window.location.href = "dashboard.html");
     }
 
-    // Populate Filters
-    function populateFilters() {
-      const years = [...new Set(allSubmissions.map((s) => s.year))];
-      const terms = [...new Set(allSubmissions.map((s) => s.term))];
-      const subjects = [...new Set(allSubmissions.map((s) => s.subject))];
-      const types = [...new Set(allSubmissions.map((s) => s.type))];
+    teacherClass = teacher.class || "";
+    teacherYear = teacher.year || "";
 
-      fillDropdown(filterYear, years);
-      fillDropdown(filterTerm, terms);
-      fillDropdown(filterSubject, subjects);
-      fillDropdown(filterType, types);
+    loadSubmissions();
+  });
 
-      // Auto-fill teacher's year if available
-      if (teacherYear && !filterYear.value) {
-        filterYear.innerHTML = `<option>${teacherYear}</option>`;
-        filterYear.disabled = true;
-      }
-    }
+  // Load Submissions for Teacher’s Class
+  async function loadSubmissions() {
+    submissionsTable.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-gray-500">Loading...</td></tr>`;
+    const theorySnap = await db.ref("theorySubmissions").once("value");
+    const data = theorySnap.val() || {};
 
-    function fillDropdown(select, items) {
-      select.innerHTML = `<option value="">All</option>` +
-        items.map(v => `<option value="${v}">${v}</option>`).join("");
-    }
+    allSubmissions = [];
 
-    // Render Table
-    function renderSubmissions() {
-      const year = filterYear.value;
-      const term = filterTerm.value;
-      const subject = filterSubject.value;
-      const type = filterType.value;
-
-      const filtered = allSubmissions.filter(s =>
-        (!year || s.year === year) &&
-        (!term || s.term === term) &&
-        (!subject || s.subject === subject) &&
-        (!type || s.type === type)
-      );
-
-      submissionsTable.innerHTML = "";
-
-      if (!filtered.length) {
-        submissionsTable.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-gray-500">No matching submissions.</td></tr>`;
-        avgDisplay.innerHTML = "";
-        return;
-      }
-
-      let total = 0, gradedCount = 0;
-      filtered.forEach(sub => {
-        if (sub.graded) { total += sub.totalScore || 0; gradedCount++; }
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td class="p-3 border">${sub.studentName}</td>
-          <td class="p-3 border">${sub.studentClass}</td>
-          <td class="p-3 border">${sub.year}</td>
-          <td class="p-3 border">${sub.subject}</td>
-          <td class="p-3 border">${sub.term}</td>
-          <td class="p-3 border">${sub.type || '-'}</td>
-          <td class="p-3 border">${sub.assessmentName}</td>
-          <td class="p-3 border ${sub.graded ? 'text-green-600' : 'text-red-600'}">${sub.graded ? 'Graded' : 'Pending'}</td>
-          <td class="p-3 border">${sub.totalScore ?? '-'}</td>
-          <td class="p-3 border">
-            <button class="bg-indigo-600 text-white px-3 py-1 rounded gradeBtn" data-id="${sub.assessmentId}" data-uid="${sub.studentUid}">Grade</button>
-          </td>`;
-        submissionsTable.appendChild(tr);
-      });
-
-      const avg = gradedCount ? (total / gradedCount).toFixed(2) : "-";
-      avgDisplay.innerHTML = `<div class="bg-gray-100 p-3 rounded text-gray-700">Average Score: <span class="font-bold text-indigo-700">${avg}</span></div>`;
-
-      attachGradeEvents();
-    }
-
-    // Grade Buttons
-    function attachGradeEvents() {
-      document.querySelectorAll(".gradeBtn").forEach(btn => {
-        btn.addEventListener("click", async () => {
-          const id = btn.dataset.id;
-          const uid = btn.dataset.uid;
-          const snap = await db.ref(`theorySubmissions/${id}/${uid}`).once("value");
-          if (!snap.exists()) return;
-          currentSubmission = { path: `theorySubmissions/${id}/${uid}`, ...snap.val() };
-          openGradingModal(currentSubmission);
-        });
-      });
-    }
-
-    // Modal
-    function openGradingModal(sub) {
-      gradingContent.innerHTML = sub.answers.map((a, i) => `
-        <div class="mb-4">
-          <p class="font-semibold">Q${i + 1}: ${a.question}</p>
-          <p class="ml-2 text-gray-700">Answer: ${a.answer}</p>
-          <input type="number" min="0" max="${a.expectedScore}" value="${a.score ?? ''}"
-            class="scoreInput border rounded px-2 py-1 mt-1 w-24" data-idx="${i}" placeholder="Score / ${a.expectedScore}">
-          <span class="ml-2 text-sm text-gray-500">Max: ${a.expectedScore}</span>
-        </div>
-      `).join("");
-      gradingModal.classList.remove("hidden");
-    }
-
-    // Save Scores
-    saveScoresBtn.addEventListener("click", async () => {
-      const inputs = gradingContent.querySelectorAll(".scoreInput");
-      let total = 0;
-      const updated = currentSubmission.answers.map((a, i) => {
-        const score = Number(inputs[i].value) || 0;
-        if (score > a.expectedScore) {
-          alert(`Q${i + 1}: max ${a.expectedScore}`);
-          throw new Error();
+    Object.entries(data).forEach(([assessmentId, studentSubs]) => {
+      Object.entries(studentSubs).forEach(([uid, sub]) => {
+        if (sub.studentClass === teacherClass) {
+          // ensure type is captured
+          const type = sub.type || "Unspecified";
+          allSubmissions.push({ ...sub, type, assessmentId });
         }
-        total += score;
-        return { ...a, score };
       });
-
-      await db.ref(currentSubmission.path).update({
-        answers: updated,
-        totalScore: total,
-        graded: true
-      });
-      gradingModal.classList.add("hidden");
-      loadSubmissions();
     });
 
-    closeModalBtn.addEventListener("click", () => gradingModal.classList.add("hidden"));
-    clearFiltersBtn.addEventListener("click", () => {
-      [filterYear, filterTerm, filterSubject, filterType].forEach(s => s.value = "");
-      renderSubmissions();
+    if (!allSubmissions.length) {
+      submissionsTable.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-gray-500">No submissions found for your class.</td></tr>`;
+      return;
+    }
+
+    populateFilters();
+    renderSubmissions();
+  }
+
+  // Populate Filters dynamically based on available submissions
+  function populateFilters() {
+    updateAvailableFilters();
+
+    // Auto-fill and lock teacher’s year
+    if (teacherYear) {
+      filterYear.innerHTML = `<option value="${teacherYear}">${teacherYear}</option>`;
+      filterYear.disabled = true;
+    }
+  }
+
+  function updateAvailableFilters() {
+    const filtered = applyFilters(false); // preview current filtered set
+
+    const years = [...new Set(filtered.map(s => s.year))];
+    const terms = [...new Set(filtered.map(s => s.term))];
+    const subjects = [...new Set(filtered.map(s => s.subject))];
+    const types = [...new Set(filtered.map(s => s.type))];
+
+    fillDropdown(filterTerm, terms);
+    fillDropdown(filterSubject, subjects);
+    fillDropdown(filterType, types);
+  }
+
+  function fillDropdown(select, items) {
+    const currentValue = select.value;
+    select.innerHTML = `<option value="">All</option>` +
+      items.map(v => `<option value="${v}">${v}</option>`).join("");
+    if (items.includes(currentValue)) select.value = currentValue;
+  }
+
+  // Render Table
+  function renderSubmissions() {
+    const filtered = applyFilters();
+
+    submissionsTable.innerHTML = "";
+
+    if (!filtered.length) {
+      submissionsTable.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-gray-500">No matching submissions.</td></tr>`;
+      avgDisplay.innerHTML = "";
+      return;
+    }
+
+    let total = 0, gradedCount = 0;
+    filtered.forEach(sub => {
+      if (sub.graded) { total += sub.totalScore || 0; gradedCount++; }
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="p-3 border">${sub.studentName}</td>
+        <td class="p-3 border">${sub.studentClass}</td>
+        <td class="p-3 border">${sub.year}</td>
+        <td class="p-3 border">${sub.subject}</td>
+        <td class="p-3 border">${sub.term}</td>
+        <td class="p-3 border">${sub.type}</td>
+        <td class="p-3 border">${sub.assessmentName}</td>
+        <td class="p-3 border ${sub.graded ? 'text-green-600' : 'text-red-600'}">${sub.graded ? 'Graded' : 'Pending'}</td>
+        <td class="p-3 border">${sub.totalScore ?? '-'}</td>
+        <td class="p-3 border">
+          <button class="bg-indigo-600 text-white px-3 py-1 rounded gradeBtn" data-id="${sub.assessmentId}" data-uid="${sub.studentUid}">Grade</button>
+        </td>`;
+      submissionsTable.appendChild(tr);
     });
 
-    [filterYear, filterTerm, filterSubject, filterType].forEach(sel => sel.addEventListener("change", renderSubmissions));
-  </script>
+    const avg = gradedCount ? (total / gradedCount).toFixed(2) : "-";
+    avgDisplay.innerHTML = `<div class="bg-gray-100 p-3 rounded text-gray-700">Average Score: <span class="font-bold text-indigo-700">${avg}</span></div>`;
+
+    attachGradeEvents();
+  }
+
+  function applyFilters(updateFilterList = true) {
+    const year = teacherYear;
+    const term = filterTerm.value;
+    const subject = filterSubject.value;
+    const type = filterType.value;
+
+    const filtered = allSubmissions.filter(s =>
+      (!year || s.year === year) &&
+      (!term || s.term === term) &&
+      (!subject || s.subject === subject) &&
+      (!type || s.type === type)
+    );
+
+    if (updateFilterList) updateAvailableFilters();
+    return filtered;
+  }
+
+  // Grade Buttons
+  function attachGradeEvents() {
+    document.querySelectorAll(".gradeBtn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.id;
+        const uid = btn.dataset.uid;
+        const snap = await db.ref(`theorySubmissions/${id}/${uid}`).once("value");
+        if (!snap.exists()) return;
+        currentSubmission = { path: `theorySubmissions/${id}/${uid}`, ...snap.val() };
+        openGradingModal(currentSubmission);
+      });
+    });
+  }
+
+  // Modal
+  function openGradingModal(sub) {
+    gradingContent.innerHTML = sub.answers.map((a, i) => `
+      <div class="mb-4">
+        <p class="font-semibold">Q${i + 1}: ${a.question}</p>
+        <p class="ml-2 text-gray-700">Answer: ${a.answer}</p>
+        <input type="number" min="0" max="${a.expectedScore}" value="${a.score ?? ''}"
+          class="scoreInput border rounded px-2 py-1 mt-1 w-24" data-idx="${i}" placeholder="Score / ${a.expectedScore}">
+        <span class="ml-2 text-sm text-gray-500">Max: ${a.expectedScore}</span>
+      </div>
+    `).join("");
+    gradingModal.classList.remove("hidden");
+  }
+
+  // Save Scores
+  saveScoresBtn.addEventListener("click", async () => {
+    const inputs = gradingContent.querySelectorAll(".scoreInput");
+    let total = 0;
+    const updated = currentSubmission.answers.map((a, i) => {
+      const score = Number(inputs[i].value) || 0;
+      if (score > a.expectedScore) {
+        alert(`Q${i + 1}: max ${a.expectedScore}`);
+        throw new Error();
+      }
+      total += score;
+      return { ...a, score };
+    });
+
+    await db.ref(currentSubmission.path).update({
+      answers: updated,
+      totalScore: total,
+      graded: true
+    });
+    gradingModal.classList.add("hidden");
+    loadSubmissions();
+  });
+
+  closeModalBtn.addEventListener("click", () => gradingModal.classList.add("hidden"));
+  clearFiltersBtn.addEventListener("click", () => {
+    [filterTerm, filterSubject, filterType].forEach(s => s.value = "");
+    renderSubmissions();
+  });
+
+  [filterTerm, filterSubject, filterType].forEach(sel =>
+    sel.addEventListener("change", () => renderSubmissions())
+  );
+</script>
+
 </body>
 </html>
+
