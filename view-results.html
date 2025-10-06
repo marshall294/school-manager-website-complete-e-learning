@@ -3,161 +3,60 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Assessment Results | ORLI Academy</title>
+  <title>CBT Results Broadsheet | ORLI Academy</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f1f8e9;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background: #33691e;
-      color: white;
-      padding: 20px;
-      text-align: center;
-      font-size: 24px;
-    }
-    nav {
-      background: #c5e1a5;
-      padding: 10px 20px;
-      display: flex;
-      gap: 20px;
-      justify-content: center;
-    }
-    nav a {
-      color: #1b5e20;
-      text-decoration: none;
-      font-weight: bold;
-    }
-    nav a:hover {
-      text-decoration: underline;
-    }
-    .container {
-      max-width: 1000px;
-      margin: 20px auto;
-      background: #fff;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    .filters label {
-      font-weight: bold;
-      display: block;
-      margin-top: 10px;
-    }
-    .filters select {
-      width: 100%;
-      padding: 8px;
-      margin-bottom: 10px;
-    }
-    button {
-      padding: 10px 20px;
-      background: #558b2f;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-top: 10px;
-    }
-    button:hover {
-      background: #33691e;
-    }
-    #assessmentInfo {
-      margin-top: 20px;
-      padding: 10px;
-      background: #f9fbe7;
-      border-left: 4px solid #558b2f;
-      display: none;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      display: none;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 10px;
-      text-align: left;
-    }
-    th {
-      background: #c5e1a5;
-    }
-    #detailModal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.7);
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-    }
-    #answerScript {
-      background: white;
-      max-height: 80vh;
-      overflow: auto;
-      padding: 20px;
-      width: 90%;
-      max-width: 800px;
-      border-radius: 8px;
-    }
-    .question-block {
-      margin-bottom: 15px;
-      padding: 10px;
-      border: 1px solid #ccc;
-      background: #f9f9f9;
-      border-left: 4px solid #558b2f;
-    }
-  </style>
 </head>
-<body>
-  <header>CBT Results</header>
-  <nav>
-    <a href="cbt-result.html">📊 CBT BROADSHEET</a>
-  </nav>
-  <div class="container">
-    <div class="filters">
-      <label for="year">Academic Year:</label>
-      <select id="year"></select>
+<body class="bg-green-50 min-h-screen p-6">
 
-      <label for="term">Term:</label>
-      <select id="term"></select>
-
-      <label for="subject">Subject:</label>
-      <select id="subject"></select>
-
-      <label for="type">Assessment Type:</label>
-      <select id="type"></select>
-
-      <button onclick="loadResults()">Load Results</button>
+  <!-- Header -->
+  <header class="bg-green-700 text-white py-4 px-6 rounded-lg shadow mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+    <div>
+      <h1 class="text-2xl font-bold">ORLI International Academy</h1>
+      <p class="text-sm opacity-80">CBT Results Broadsheet</p>
     </div>
+    <button onclick="exportCSV()" class="bg-lime-600 hover:bg-lime-700 transition text-white px-4 py-2 rounded mt-3 sm:mt-0">
+      Export CSV
+    </button>
+  </header>
 
-    <div id="assessmentInfo"></div>
+  <!-- Filters -->
+  <section class="bg-white p-5 rounded-lg shadow mb-6">
+    <h2 class="font-semibold text-lg text-gray-700 mb-4">Filter by Academic Year and Term</h2>
+    <div class="flex flex-wrap gap-4">
+      <select id="year" class="border border-gray-300 p-2 rounded-lg text-gray-700 w-full sm:w-auto">
+        <option value="">-- Select Year --</option>
+      </select>
+      <select id="term" class="border border-gray-300 p-2 rounded-lg text-gray-700 w-full sm:w-auto">
+        <option value="">-- Select Term --</option>
+      </select>
+      <button onclick="loadResults()" class="bg-green-600 hover:bg-green-700 transition text-white px-5 py-2 rounded-lg">
+        Load Results
+      </button>
+    </div>
+  </section>
 
-    <table id="resultsTable">
-      <thead>
-        <tr>
-          <th>Student Name</th>
-          <th>Subject</th>
-          <th>Score (%)</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
+  <!-- Assessment Info -->
+  <div id="assessmentInfo" class="hidden bg-lime-50 border-l-4 border-lime-600 p-4 rounded-lg text-gray-800 mb-6"></div>
+
+  <!-- Results Table -->
+  <section id="tableSection" class="overflow-x-auto bg-white p-5 rounded-lg shadow hidden">
+    <h3 class="text-lg font-semibold text-gray-700 mb-3 border-b pb-2">Student Broadsheet</h3>
+    <table id="resultsTable" class="min-w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
+      <thead id="thead" class="bg-green-50 text-gray-700 text-xs uppercase tracking-wide"></thead>
+      <tbody id="tbody" class="text-gray-700"></tbody>
     </table>
-  </div>
+  </section>
 
-  <div id="detailModal">
-    <div id="answerScript">
-      <button onclick="closeModal()">Close</button>
-    </div>
-  </div>
+  <!-- Summary Section -->
+  <section id="summaryContainer" class="mt-8 hidden bg-white p-5 rounded-lg shadow">
+    <h3 class="font-semibold text-lg text-gray-800 mb-4 border-b pb-2">Summary</h3>
+  </section>
 
   <script>
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
       authDomain: "school-6425b.firebaseapp.com",
@@ -171,10 +70,10 @@
     const auth = firebase.auth();
     const db = firebase.database();
 
-    const filters = ["year", "term", "subject", "type"];
-    const selected = {};
     let teacherClass = "";
     let filteredCBTs = [];
+    const filters = ["year", "term"];
+    const selected = {};
 
     auth.onAuthStateChanged(user => {
       if (!user) return location.href = "login.html";
@@ -196,7 +95,7 @@
           const validIds = new Set(resultList.map(r => r.cbtId));
           filteredCBTs = classCBTs.filter(cbt => validIds.has(cbt.id));
 
-          const sets = { year: new Set(), term: new Set(), subject: new Set(), type: new Set() };
+          const sets = { year: new Set(), term: new Set() };
           filteredCBTs.forEach(item => filters.forEach(f => item[f] && sets[f].add(item[f])));
 
           filters.forEach(f => {
@@ -210,115 +109,174 @@
       });
     }
 
+    function getGrade(avg) {
+      avg = parseFloat(avg);
+      if (avg >= 70) return "A";
+      if (avg >= 60) return "B";
+      if (avg >= 50) return "C";
+      if (avg >= 45) return "D";
+      if (avg >= 40) return "E";
+      return "F";
+    }
+
     function loadResults() {
       filters.forEach(f => selected[f] = document.getElementById(f).value);
-      if (Object.values(selected).includes("")) {
-        alert("Please complete all filters.");
+      if (!selected.year || !selected.term) {
+        alert("Please select academic year and term.");
         return;
       }
-
-      const match = filteredCBTs.find(a =>
-        a.year == selected.year &&
-        a.term == selected.term &&
-        a.class == teacherClass &&
-        a.subject == selected.subject &&
-        a.type == selected.type
-      );
 
       const infoBox = document.getElementById("assessmentInfo");
-      const table = document.getElementById("resultsTable");
-      const tbody = document.querySelector("#resultsTable tbody");
+      const tableSection = document.getElementById("tableSection");
+      const summaryContainer = document.getElementById("summaryContainer");
+      const thead = document.getElementById("thead");
+      const tbody = document.getElementById("tbody");
 
-      if (!match) {
-        infoBox.style.display = "block";
-        infoBox.innerHTML = `<strong>No results found</strong> for the selected filter.`;
-        table.style.display = "none";
-        tbody.innerHTML = "";
+      infoBox.classList.add("hidden");
+      tableSection.classList.add("hidden");
+      summaryContainer.classList.add("hidden");
+
+      const matches = filteredCBTs.filter(cbt =>
+        cbt.year === selected.year &&
+        cbt.term === selected.term &&
+        cbt.class === teacherClass
+      );
+
+      if (!matches.length) {
+        infoBox.classList.remove("hidden");
+        infoBox.innerHTML = `<strong>No results</strong> found for selected filters.`;
         return;
       }
 
-      infoBox.style.display = "block";
-      infoBox.innerHTML = `
-        <strong>Assessment:</strong> ${match.subject} (${match.type})<br>
-        <strong>Class:</strong> ${match.class} &nbsp;&nbsp;
-        <strong>Term:</strong> ${match.term} &nbsp;&nbsp;
-        <strong>Year:</strong> ${match.year}
-      `;
+      const subjects = [...new Set(matches.map(cbt => cbt.subject))].sort();
+      const subjectMap = {};
+      matches.forEach(cbt => {
+        if (!subjectMap[cbt.subject]) subjectMap[cbt.subject] = {};
+        subjectMap[cbt.subject][cbt.type] = cbt;
+      });
 
-      db.ref("results").orderByChild("cbtId").equalTo(match.id).once("value").then(snap => {
-        const data = snap.val() || {};
-        tbody.innerHTML = "";
+      db.ref("results").once("value").then(snap => {
+        const allResults = Object.values(snap.val() || {});
+        const studentMap = {};
 
-        if (Object.keys(data).length === 0) {
-          infoBox.innerHTML += `<br><em>No student submissions yet.</em>`;
-          table.style.display = "none";
-          return;
-        }
+        allResults.forEach(res => {
+          const cbt = matches.find(c => c.id === res.cbtId);
+          if (!cbt) return;
+          const { subject, type } = cbt;
+          const student = res.student;
+          const answers = res.answers || [];
 
-        Object.entries(data).forEach(([_, val]) => {
           let correct = 0;
-          const answers = val.answers || [];
-          match.questions.forEach((q, i) => {
-            const studentAns = (answers[i] || "").toLowerCase();
-            const correctAns = (q.answer || "").toLowerCase();
-            if (studentAns === correctAns) correct++;
+          cbt.questions.forEach((q, i) => {
+            if ((answers[i] || "").toLowerCase() === (q.answer || "").toLowerCase()) correct++;
           });
 
-          const score = ((correct / match.questions.length) * 100).toFixed(2);
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td>${val.student}</td>
-            <td>${match.subject}</td>
-            <td>${score}</td>
-            <td><button onclick='viewDetail("${match.id}", "${val.student.replace(/"/g, '&quot;')}")'>View</button></td>
-          `;
-          tbody.appendChild(row);
+          const rawScore = (correct / cbt.questions.length) * 100;
+          if (!studentMap[student]) studentMap[student] = {};
+          if (!studentMap[student][subject]) studentMap[student][subject] = {};
+          studentMap[student][subject][type] = rawScore;
         });
 
-        table.style.display = "table";
-      });
-    }
+        // Create table header
+        let headerHTML = `<tr><th rowspan="2" class="p-3 border bg-green-100 text-left font-semibold">Student</th>`;
+        subjects.forEach(sub => {
+          headerHTML += `<th colspan="5" class="p-3 border bg-green-100 text-center font-semibold">${sub}</th>`;
+        });
+        headerHTML += `<th rowspan="2" class="p-3 border bg-green-100 text-center font-semibold">Total</th>
+                       <th rowspan="2" class="p-3 border bg-green-100 text-center font-semibold">Average</th>
+                       <th rowspan="2" class="p-3 border bg-green-100 text-center font-semibold">Grade</th></tr><tr>`;
+        subjects.forEach(() => {
+          headerHTML += `<th class="p-2 border text-xs">CA1</th>
+                         <th class="p-2 border text-xs">CA2</th>
+                         <th class="p-2 border text-xs">Assign</th>
+                         <th class="p-2 border text-xs">Proj</th>
+                         <th class="p-2 border text-xs">Exam</th>`;
+        });
+        headerHTML += "</tr>";
+        thead.innerHTML = headerHTML;
 
-    function viewDetail(cbtId, studentName) {
-      const box = document.getElementById("answerScript");
-      box.innerHTML = `<button onclick="closeModal()">Close</button><p><strong>Student:</strong> ${studentName}</p>`;
+        // Rows per student
+        tbody.innerHTML = "";
+        const subjectStats = {};
 
-      const assessment = filteredCBTs.find(cbt => cbt.id === cbtId);
-      db.ref("results").orderByChild("cbtId").equalTo(cbtId).once("value").then(snap => {
-        const data = snap.val() || {};
-        const entry = Object.values(data).find(v => v.student === studentName);
-        if (!entry) {
-          box.innerHTML += "<p>No answer script found for this student.</p>";
-          return;
+        Object.entries(studentMap).forEach(([student, subjScores]) => {
+          let row = `<tr class="even:bg-gray-50 hover:bg-gray-100 transition"><td class="p-3 border font-semibold">${student}</td>`;
+          let totalAll = 0, count = 0;
+
+          subjects.forEach(sub => {
+            const sc = subjScores[sub] || {};
+            const ca1 = Math.min((sc["CA 1"] || 0) * 0.2, 20);
+            const ca2 = Math.min((sc["CA 2"] || 0) * 0.2, 20);
+            const asg = Math.min((sc["Assignment"] || 0) * 0.1, 10);
+            const prj = Math.min((sc["Project"] || 0) * 0.1, 10);
+            const exm = Math.min((sc["Examination"] || 0) * 0.4, 40);
+            const total = +(ca1 + ca2 + asg + prj + exm).toFixed(2);
+
+            if (!subjectStats[sub]) subjectStats[sub] = [];
+            subjectStats[sub].push(total);
+
+            if (total > 0) { totalAll += total; count++; }
+
+            row += `<td class="p-2 border text-center">${ca1.toFixed(1)}</td>
+                    <td class="p-2 border text-center">${ca2.toFixed(1)}</td>
+                    <td class="p-2 border text-center">${asg.toFixed(1)}</td>
+                    <td class="p-2 border text-center">${prj.toFixed(1)}</td>
+                    <td class="p-2 border text-center">${exm.toFixed(1)}</td>`;
+          });
+
+          const avg = count ? (totalAll / count).toFixed(2) : "0.00";
+          const grade = getGrade(avg);
+          row += `<td class="p-2 border text-center font-semibold">${totalAll.toFixed(2)}</td>
+                  <td class="p-2 border text-center">${avg}</td>
+                  <td class="p-2 border text-center font-bold ${
+                    grade === "A" ? "text-green-600" :
+                    grade === "B" ? "text-blue-600" :
+                    grade === "C" ? "text-yellow-600" :
+                    grade === "D" ? "text-orange-600" :
+                    "text-red-600"}">${grade}</td></tr>`;
+
+          tbody.insertAdjacentHTML("beforeend", row);
+        });
+
+        // Summary
+        let summaryHTML = `<div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-200 rounded-lg">
+          <thead class="bg-green-50 text-gray-700 uppercase text-xs tracking-wide">
+            <tr><th class="border p-2 text-left">Subject</th><th class="border p-2">Highest</th><th class="border p-2">Lowest</th><th class="border p-2">Average</th></tr>
+          </thead><tbody>`;
+        for (const [subject, arr] of Object.entries(subjectStats)) {
+          const high = Math.max(...arr);
+          const low = Math.min(...arr);
+          const avg = (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(2);
+          summaryHTML += `<tr class="even:bg-gray-50 hover:bg-gray-100 transition">
+            <td class="border p-2">${subject}</td>
+            <td class="border p-2 text-center">${high}</td>
+            <td class="border p-2 text-center">${low}</td>
+            <td class="border p-2 text-center">${avg}</td></tr>`;
         }
+        summaryHTML += "</tbody></table></div>";
 
-        const answers = entry.answers || [];
-        assessment.questions.forEach((q, i) => {
-          const picked = (answers[i] || "").toLowerCase();
-          const correctAns = (q.answer || "").toLowerCase();
-          box.innerHTML += `
-            <div class="question-block">
-              <strong>Q${i + 1}:</strong> ${q.question}<br>
-              ${["a", "b", "c", "d"].map(opt => `
-                <div>${opt.toUpperCase()}: ${q[opt]} 
-                  ${picked === opt ? "✅" : ""} 
-                  ${correctAns === opt && picked !== opt ? "✔️" : ""}
-                </div>
-              `).join("")}
-              <div><strong>Your Answer:</strong> ${picked.toUpperCase() || "N/A"}</div>
-              <div><strong>Correct Answer:</strong> ${correctAns.toUpperCase()}</div>
-            </div>
-          `;
-        });
-
-        document.getElementById("detailModal").style.display = "flex";
+        summaryContainer.innerHTML = summaryHTML;
+        infoBox.innerHTML = `<strong>Showing results for:</strong> ${selected.year}, ${selected.term}`;
+        infoBox.classList.remove("hidden");
+        tableSection.classList.remove("hidden");
+        summaryContainer.classList.remove("hidden");
       });
     }
 
-    function closeModal() {
-      document.getElementById("detailModal").style.display = "none";
+    // Export CSV
+    function exportCSV() {
+      const rows = [...document.querySelectorAll("#resultsTable tr")];
+      const csv = rows.map(row =>
+        [...row.querySelectorAll("th, td")].map(cell => cell.textContent.trim()).join(",")
+      ).join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `CBT_Results_${selected.year}_${selected.term}.csv`;
+      link.click();
     }
-    window.closeModal = closeModal;
   </script>
 </body>
 </html>
