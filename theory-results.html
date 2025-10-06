@@ -15,21 +15,31 @@
   <div class="flex justify-between items-center mb-6">
     <div>
       <h1 class="text-2xl font-bold">Bright Future Academy</h1>
-      <p class="text-gray-600">Teacher Broadsheet Summary</p>
+      <p class="text-gray-600">Theory Broadsheet Summary</p>
     </div>
     <button id="logoutBtn" class="bg-red-600 text-white px-4 py-2 rounded">Logout</button>
   </div>
 
   <!-- Filters -->
   <div class="bg-white p-4 rounded shadow mb-6">
-    <h2 class="font-semibold mb-3">Filter by Term and Assessment Type</h2>
+    <h2 class="font-semibold mb-3">Filter by Academic Year and Term</h2>
     <div class="flex flex-wrap gap-3">
+      <select id="filterYear" class="border p-2 rounded">
+        <option value="">Select Academic Year</option>
+        <option value="2025-2026">2025–2026</option>
+        <option value="2026-2027">2026–2027</option>
+        <option value="2027-2028">2027–2028</option>
+        <option value="2028-2029">2028–2029</option>
+        <option value="2029-2030">2029–2030</option>
+      </select>
+
       <select id="filterTerm" class="border p-2 rounded">
         <option value="">Select Term</option>
+        <option>First Term</option>
+        <option>Second Term</option>
+        <option>Third Term</option>
       </select>
-      <select id="filterType" class="border p-2 rounded">
-        <option value="">Select Type</option>
-      </select>
+
       <button id="generateBtn" class="bg-blue-600 text-white px-4 py-2 rounded">Generate Broadsheet</button>
     </div>
   </div>
@@ -37,7 +47,6 @@
   <!-- Teacher Info -->
   <div class="bg-white p-4 rounded shadow mb-6">
     <p><strong>Teacher Class:</strong> <span id="teacherClassDisplay" class="text-blue-700"></span></p>
-    <p><strong>Academic Year:</strong> <span id="teacherYearDisplay" class="text-blue-700"></span></p>
   </div>
 
   <!-- Broadsheet Table -->
@@ -75,18 +84,16 @@
 
     const types = ["CA 1", "CA 2", "Examination", "Homework", "Project"];
 
+    const filterYear = document.getElementById("filterYear");
     const filterTerm = document.getElementById("filterTerm");
-    const filterType = document.getElementById("filterType");
     const generateBtn = document.getElementById("generateBtn");
     const tableContainer = document.getElementById("tableContainer");
     const summaryContainer = document.getElementById("summaryContainer");
     const thead = document.getElementById("thead");
     const tbody = document.getElementById("tbody");
     const teacherClassDisplay = document.getElementById("teacherClassDisplay");
-    const teacherYearDisplay = document.getElementById("teacherYearDisplay");
 
     let teacherClass = "";
-    let teacherYear = "";
 
     // Logout
     document.getElementById("logoutBtn").addEventListener("click", () => {
@@ -105,39 +112,18 @@
       }
 
       teacherClass = teacher.class || "";
-      teacherYear = teacher.year || "";
-
       teacherClassDisplay.textContent = teacherClass || "Not Assigned";
-      teacherYearDisplay.textContent = teacherYear || "Not Assigned";
-
-      populateFilters();
     });
-
-    function populateFilters() {
-      ["First Term", "Second Term", "Third Term"].forEach(t => {
-        const opt = document.createElement("option");
-        opt.value = t;
-        opt.textContent = t;
-        filterTerm.appendChild(opt);
-      });
-
-      types.forEach(tp => {
-        const opt = document.createElement("option");
-        opt.value = tp;
-        opt.textContent = tp;
-        filterType.appendChild(opt);
-      });
-    }
 
     generateBtn.addEventListener("click", async () => {
+      const year = filterYear.value;
       const term = filterTerm.value;
-      const type = filterType.value;
-      if (!term || !type) return alert("Select both term and type.");
+      if (!year || !term) return alert("Please select both year and term.");
 
-      await generateBroadsheet(term, type);
+      await generateBroadsheet(year, term);
     });
 
-    async function generateBroadsheet(term, type) {
+    async function generateBroadsheet(year, term) {
       tableContainer.classList.add("hidden");
       summaryContainer.classList.add("hidden");
 
@@ -150,9 +136,8 @@
         Object.entries(studentSubs).forEach(([uid, sub]) => {
           if (
             sub.studentClass === teacherClass &&
-            sub.year === teacherYear &&
-            sub.term === term &&
-            sub.type === type
+            sub.year === year &&
+            sub.term === term
           ) {
             submissions.push(sub);
           }
@@ -160,14 +145,14 @@
       });
 
       if (!submissions.length) {
-        alert("No submissions found for this class, term, and type.");
+        alert("No submissions found for this class and term.");
         return;
       }
 
-      // Table header
+      // Header
       let header = `<tr class="bg-gray-200"><th class="p-2 border">Student</th>`;
       subjects.forEach(subject => {
-        header += `<th class="p-2 border text-center">${subject}</th>`;
+        header += `<th class="p-2 border text-center">${subject}<br><span class="text-xs text-gray-500">(CA1 / CA2 / Exam / HW / Proj)</span></th>`;
       });
       header += "</tr>";
       thead.innerHTML = header;
@@ -176,7 +161,8 @@
       const grouped = {};
       submissions.forEach(s => {
         if (!grouped[s.studentName]) grouped[s.studentName] = {};
-        grouped[s.studentName][s.subject] = s.totalScore || 0;
+        if (!grouped[s.studentName][s.subject]) grouped[s.studentName][s.subject] = {};
+        grouped[s.studentName][s.subject][s.type] = s.totalScore || 0;
       });
 
       tbody.innerHTML = "";
@@ -185,17 +171,22 @@
       for (const student in grouped) {
         let row = `<tr><td class="p-2 border font-semibold">${student}</td>`;
         subjects.forEach(subject => {
-          const score = grouped[student][subject] ?? "-";
+          const scores = grouped[student][subject] || {};
+          const cellScores = types.map(t => scores[t] ?? "-");
+          const validScores = Object.values(scores).filter(s => typeof s === "number");
+          const avg = validScores.length ? (validScores.reduce((a,b)=>a+b,0)/validScores.length) : null;
+
           if (!subjectStats[subject]) subjectStats[subject] = [];
-          if (typeof score === "number") subjectStats[subject].push(score);
-          row += `<td class="p-2 border text-center">${score}</td>`;
+          if (avg) subjectStats[subject].push(avg);
+
+          row += `<td class="p-2 border text-center">${cellScores.join(" / ")}</td>`;
         });
         row += "</tr>";
         tbody.insertAdjacentHTML("beforeend", row);
       }
 
-      // Compute summary
-      let summaryHtml = `<h3 class="font-semibold text-lg mb-2">Class Summary (${teacherClass}, ${term}, ${teacherYear}, ${type})</h3>`;
+      // Summary section
+      let summaryHtml = `<h3 class="font-semibold text-lg mb-2">Class Summary (${teacherClass}, ${term}, ${year})</h3>`;
       summaryHtml += `<div class="overflow-x-auto"><table class="min-w-full text-sm border-collapse"><thead><tr class="bg-gray-100"><th class="border p-2">Subject</th><th class="border p-2">Highest</th><th class="border p-2">Lowest</th><th class="border p-2">Average</th></tr></thead><tbody>`;
       for (const [subject, arr] of Object.entries(subjectStats)) {
         const high = Math.max(...arr);
