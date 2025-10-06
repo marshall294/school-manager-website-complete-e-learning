@@ -5,48 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Student - Theory Assessments</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
+
 <body class="bg-gray-100 min-h-screen">
+  <div class="max-w-4xl mx-auto py-8 px-4">
+    <h1 class="text-3xl font-bold text-center mb-6">Available Theory Assessments</h1>
 
-  <!-- Header -->
-  <div class="bg-blue-700 text-white py-4 text-center">
-    <h1 class="text-2xl font-bold">Student Theory Assessments</h1>
-  </div>
-
-  <div class="max-w-5xl mx-auto py-8 px-4">
-
-    <!-- Student Info -->
-    <div id="studentInfo" class="text-center mb-6 hidden">
-      <p class="text-gray-700">Welcome, <span id="studentNameDisplay"></span> (<span id="studentClassDisplay"></span>)</p>
-      <button id="changeStudentBtn" class="text-blue-600 text-sm underline">Change User</button>
-    </div>
-
-    <!-- Filters -->
-    <div class="bg-white p-4 rounded shadow mb-6">
-      <h2 class="font-bold text-lg mb-2">Filter Assessments</h2>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <select id="filterYear" class="border rounded p-2">
-          <option value="">All Years</option>
-          <option value="Year 3">Year 3</option>
-          <option value="Year 4">Year 4</option>
-          <option value="Year 5">Year 5</option>
-          <option value="Year 6">Year 6</option>
-        </select>
-
-        <select id="filterSubject" class="border rounded p-2">
-          <option value="">All Subjects</option>
-          <option value="English">English</option>
-          <option value="Mathematics">Mathematics</option>
-          <option value="Science">Science</option>
-          <option value="Social Studies">Social Studies</option>
-        </select>
-
-        <select id="filterTerm" class="border rounded p-2">
-          <option value="">All Terms</option>
-          <option value="1st Term">1st Term</option>
-          <option value="2nd Term">2nd Term</option>
-          <option value="3rd Term">3rd Term</option>
-        </select>
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <p class="text-gray-700 font-semibold">Student: 
+          <span id="studentName" class="text-blue-600"></span>
+        </p>
+        <p class="text-gray-700 font-semibold">Class: 
+          <span id="studentClass" class="text-green-600"></span>
+        </p>
       </div>
     </div>
 
@@ -56,142 +31,92 @@
     </div>
   </div>
 
-  <!-- Student Login Modal -->
-  <div id="loginModal" class="fixed inset-0 bg-gray-900 bg-opacity-70 flex items-center justify-center">
-    <div class="bg-white p-6 rounded-lg shadow max-w-sm w-full">
-      <h2 class="text-xl font-bold mb-4 text-center">Student Login</h2>
-      <form id="loginForm" class="space-y-3">
-        <input type="text" id="studentName" class="w-full border rounded p-2" placeholder="Full Name" required>
-        <input type="text" id="studentClass" class="w-full border rounded p-2" placeholder="Class (e.g. Year 5)" required>
-        <button type="submit" class="w-full bg-blue-700 text-white py-2 rounded">Login</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- Firebase + Logic -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, query, where, onSnapshot, doc, getDoc, addDoc } 
-      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
+  <script>
+    // ✅ Firebase Config (from your provided credentials)
     const firebaseConfig = {
-      apiKey: "AIzaSyDPHMhSCOcexDYa2Mo2vILKh6yXOpH7f98",
-      authDomain: "soccer2-c47c2.firebaseapp.com",
-      projectId: "soccer2-c47c2",
-      storageBucket: "soccer2-c47c2.appspot.com",
-      messagingSenderId: "981614907089",
-      appId: "1:981614907089:web:f7c0a5a82f7843e2ab5e5a"
+      apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+      authDomain: "school-6425b.firebaseapp.com",
+      databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+      projectId: "school-6425b",
+      storageBucket: "school-6425b.appspot.com",
+      messagingSenderId: "929265479935",
+      appId: "1:929265479935:web:af45ea5968ee50258a1cca"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-    const loginModal = document.getElementById("loginModal");
-    const studentInfo = document.getElementById("studentInfo");
-    const studentNameDisplay = document.getElementById("studentNameDisplay");
-    const studentClassDisplay = document.getElementById("studentClassDisplay");
-    const changeStudentBtn = document.getElementById("changeStudentBtn");
     const assessmentsList = document.getElementById("assessmentsList");
-    const filterYear = document.getElementById("filterYear");
-    const filterSubject = document.getElementById("filterSubject");
-    const filterTerm = document.getElementById("filterTerm");
-
     let studentName = "";
     let studentClass = "";
 
-    // 🔐 Check Login
-    if (localStorage.getItem("studentName")) {
-      studentName = localStorage.getItem("studentName");
-      studentClass = localStorage.getItem("studentClass");
-      showStudentInfo();
-      loginModal.classList.add("hidden");
-    }
+    // ✅ Auth check — only logged-in students
+    auth.onAuthStateChanged(user => {
+      if (!user) return window.location.href = 'login.html';
 
-    document.getElementById("loginForm").addEventListener("submit", (e) => {
-      e.preventDefault();
-      studentName = document.getElementById("studentName").value.trim();
-      studentClass = document.getElementById("studentClass").value.trim();
-      if (studentName && studentClass) {
-        localStorage.setItem("studentName", studentName);
-        localStorage.setItem("studentClass", studentClass);
-        showStudentInfo();
-        loginModal.classList.add("hidden");
-      }
-    });
+      db.ref(`users/${user.uid}`).once('value').then(snap => {
+        const data = snap.val() || {};
+        if (data.role !== 'student') return alert('Access denied. Students only.');
 
-    function showStudentInfo() {
-      studentInfo.classList.remove("hidden");
-      studentNameDisplay.textContent = studentName;
-      studentClassDisplay.textContent = studentClass;
-    }
-
-    changeStudentBtn.onclick = () => {
-      localStorage.clear();
-      location.reload();
-    };
-
-    // 🎯 Fetch and Filter Assessments
-    function loadAssessments() {
-      const filters = [];
-      filters.push(where("published", "==", true));
-
-      const selectedYear = filterYear.value;
-      const selectedSubject = filterSubject.value;
-      const selectedTerm = filterTerm.value;
-
-      if (selectedYear) filters.push(where("classYear", "==", selectedYear));
-      if (selectedSubject) filters.push(where("subject", "==", selectedSubject));
-      if (selectedTerm) filters.push(where("term", "==", selectedTerm));
-
-      const q = query(collection(db, "theoryAssessments"), ...filters);
-
-      onSnapshot(q, (snapshot) => {
-        assessmentsList.innerHTML = "";
-        if (snapshot.empty) {
-          assessmentsList.innerHTML = `<p class="text-gray-500 text-center">No assessments found for selected filters.</p>`;
+        if (!data.name || !data.class) {
+          alert('Incomplete student profile. Please contact admin.');
           return;
         }
 
-        snapshot.forEach((docSnap) => {
-          const data = docSnap.data();
+        studentName = data.name;
+        studentClass = data.class;
+
+        document.getElementById("studentName").textContent = studentName;
+        document.getElementById("studentClass").textContent = studentClass;
+
+        loadAssessments(studentClass);
+      });
+    });
+
+    // ✅ Load only published assessments for the student’s class
+    function loadAssessments(studentClass) {
+      const ref = db.ref("theoryAssessments");
+      ref.orderByChild("published").equalTo(true).on("value", snapshot => {
+        assessmentsList.innerHTML = "";
+        if (!snapshot.exists()) {
+          assessmentsList.innerHTML = `<p class="text-gray-500">No published assessments yet.</p>`;
+          return;
+        }
+
+        snapshot.forEach(child => {
+          const data = child.val();
+          if (data.class && data.class !== studentClass) return; // Filter by student’s class
+
           const div = document.createElement("div");
-          div.className = "p-4 border rounded bg-white shadow hover:shadow-md transition";
+          div.className = "p-4 border rounded bg-white shadow";
           div.innerHTML = `
-            <h3 class="font-bold text-lg">${data.assessmentName}</h3>
-            <p class="text-sm text-gray-600">${data.subject} - ${data.classYear} (${data.term})</p>
-            <p class="text-sm mt-1">Total Score: <b>${data.totalScore}</b></p>
+            <h3 class="font-bold text-lg">${data.assessmentName} - ${data.subject} (${data.term})</h3>
+            <p class="text-sm text-gray-600">Total Score: ${data.totalScore}</p>
             <button class="bg-blue-600 text-white px-3 py-1 mt-2 rounded"
-              onclick="startAssessment('${docSnap.id}')">Start Assessment</button>
+              onclick="startAssessment('${child.key}')">Start Assessment</button>
           `;
           assessmentsList.appendChild(div);
         });
       });
     }
 
-    // Watch filter changes
-    [filterYear, filterSubject, filterTerm].forEach(select => {
-      select.addEventListener("change", loadAssessments);
-    });
-
-    // Initial load
-    loadAssessments();
-
-    // 🚀 Start Assessment
+    // ✅ Start Assessment
     window.startAssessment = async (id) => {
-      const ref = doc(db, "theoryAssessments", id);
-      const snap = await getDoc(ref);
-      if (!snap.exists()) return alert("Assessment not found");
+      const ref = db.ref(`theoryAssessments/${id}`);
+      const snap = await ref.once("value");
+      if (!snap.exists()) return alert("Assessment not found.");
 
-      const data = snap.data();
+      const data = snap.val();
 
+      // Render theory assessment form
       assessmentsList.innerHTML = `
         <div class="bg-white p-6 rounded shadow">
-          <h2 class="text-2xl font-bold mb-4">${data.assessmentName}</h2>
-          <p class="text-gray-600 mb-4">${data.subject} - ${data.classYear} (${data.term})</p>
+          <h2 class="text-2xl font-bold mb-4">${data.assessmentName} - ${data.subject} (${data.term})</h2>
           <form id="answerForm" class="space-y-4">
             ${data.questions.map((q, i) => `
               <div>
-                <p class="font-medium">${i+1}. ${q.text} <span class="text-gray-500">(Score: ${q.score})</span></p>
+                <p class="font-medium">${i + 1}. ${q.text} <span class="text-gray-500">(Score: ${q.score})</span></p>
                 <textarea class="w-full p-2 border rounded answerBox" rows="3" placeholder="Type your answer here..."></textarea>
               </div>
             `).join("")}
@@ -200,9 +125,10 @@
         </div>
       `;
 
-      // Handle submission
+      // ✅ Handle submission
       document.getElementById("answerForm").addEventListener("submit", async (e) => {
         e.preventDefault();
+
         const answers = [];
         document.querySelectorAll(".answerBox").forEach((a, i) => {
           answers.push({
@@ -212,16 +138,15 @@
           });
         });
 
-        await addDoc(collection(db, "theorySubmissions"), {
+        await db.ref("theorySubmissions").push({
           studentName,
           studentClass,
           assessmentId: id,
           assessmentName: data.assessmentName,
           subject: data.subject,
-          classYear: data.classYear,
           term: data.term,
           answers,
-          submittedAt: Date.now(),
+          submittedAt: new Date().toISOString(),
           graded: false
         });
 
