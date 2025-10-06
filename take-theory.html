@@ -1,38 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Student - Theory Assessments</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Student — Theory Assessments</title>
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase v8 -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
-
 <body class="bg-gray-100 min-h-screen">
-  <div class="max-w-4xl mx-auto py-8 px-4">
+
+  <div class="max-w-5xl mx-auto py-8 px-4">
+
     <h1 class="text-3xl font-bold text-center mb-6">Available Theory Assessments</h1>
 
-    <div class="flex justify-between items-center mb-6">
+    <!-- Student info -->
+    <div class="bg-white rounded shadow p-4 mb-6 flex items-center justify-between">
       <div>
-        <p class="text-gray-700 font-semibold">Student: 
-          <span id="studentName" class="text-blue-600"></span>
-        </p>
-        <p class="text-gray-700 font-semibold">Class: 
-          <span id="studentClass" class="text-green-600"></span>
-        </p>
+        <p class="text-gray-800"><strong>Student:</strong> <span id="studentName" class="text-blue-600">—</span></p>
+        <p class="text-gray-800"><strong>Class:</strong> <span id="studentClass" class="text-green-600">—</span></p>
+      </div>
+      <div class="text-right">
+        <button id="logoutBtn" class="text-red-600 hover:underline">Logout</button>
       </div>
     </div>
 
-    <!-- Assessment List -->
+    <!-- Filters (populated dynamically) -->
+    <div class="bg-white p-4 rounded shadow mb-6">
+      <h2 class="font-semibold mb-3">Filter assessments</h2>
+      <div class="flex flex-wrap gap-3">
+        <select id="filterYear" class="border p-2 rounded" aria-label="Filter by year">
+          <option value="">All Years</option>
+        </select>
+
+        <select id="filterSubject" class="border p-2 rounded" aria-label="Filter by subject">
+          <option value="">All Subjects</option>
+        </select>
+
+        <select id="filterTerm" class="border p-2 rounded" aria-label="Filter by term">
+          <option value="">All Terms</option>
+        </select>
+
+        <button id="clearFilters" class="bg-gray-200 px-3 py-2 rounded">Clear</button>
+      </div>
+    </div>
+
+    <!-- Assessments list -->
     <div id="assessmentsList" class="space-y-4">
       <p class="text-gray-500">Loading assessments...</p>
     </div>
   </div>
 
   <script>
-    // ✅ Firebase Config (from your provided credentials)
+    // -------------------------
+    // Firebase config and init
+    // -------------------------
     const firebaseConfig = {
       apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
       authDomain: "school-6425b.firebaseapp.com",
@@ -42,118 +67,345 @@
       messagingSenderId: "929265479935",
       appId: "1:929265479935:web:af45ea5968ee50258a1cca"
     };
-
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
 
-    const assessmentsList = document.getElementById("assessmentsList");
-    let studentName = "";
-    let studentClass = "";
+    // DOM refs
+    const studentNameEl = document.getElementById('studentName');
+    const studentClassEl = document.getElementById('studentClass');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const assessmentsList = document.getElementById('assessmentsList');
+    const filterYear = document.getElementById('filterYear');
+    const filterSubject = document.getElementById('filterSubject');
+    const filterTerm = document.getElementById('filterTerm');
+    const clearFiltersBtn = document.getElementById('clearFilters');
 
-    // ✅ Auth check — only logged-in students
-    auth.onAuthStateChanged(user => {
-      if (!user) return window.location.href = 'login.html';
+    // Local state
+    let currentUser = null;
+    let studentName = '';
+    let studentClass = '';
+    let allAssessments = []; // published assessments for this class
+    let submittedMap = {};    // { assessmentId: true } for fast lookup
 
-      db.ref(`users/${user.uid}`).once('value').then(snap => {
-        const data = snap.val() || {};
-        if (data.role !== 'student') return alert('Access denied. Students only.');
-
-        if (!data.name || !data.class) {
-          alert('Incomplete student profile. Please contact admin.');
-          return;
-        }
-
-        studentName = data.name;
-        studentClass = data.class;
-
-        document.getElementById("studentName").textContent = studentName;
-        document.getElementById("studentClass").textContent = studentClass;
-
-        loadAssessments(studentClass);
-      });
+    // logout
+    logoutBtn.addEventListener('click', () => {
+      auth.signOut().then(() => location.href = 'login.html');
     });
 
-    // ✅ Load only published assessments for the student’s class
-    function loadAssessments(studentClass) {
-      const ref = db.ref("theoryAssessments");
-      ref.orderByChild("published").equalTo(true).on("value", snapshot => {
-        assessmentsList.innerHTML = "";
-        if (!snapshot.exists()) {
-          assessmentsList.innerHTML = `<p class="text-gray-500">No published assessments yet.</p>`;
+    // -------------------------
+    // Auth & load student info
+    // -------------------------
+    auth.onAuthStateChanged(async user => {
+      if (!user) {
+        // not logged in => redirect to login page
+        return window.location.href = 'login.html';
+      }
+      currentUser = user;
+
+      // fetch user profile from Realtime DB
+      const userSnap = await db.ref(`users/${user.uid}`).once('value');
+      const userData = userSnap.val() || {};
+
+      // role check
+      if (userData.role !== 'student') {
+        alert('Access denied. Students only.');
+        return window.location.href = 'dashboard.html';
+      }
+
+      if (!userData.name || !userData.class) {
+        alert('Incomplete student profile. Please contact admin.');
+        return;
+      }
+
+      studentName = userData.name;
+      studentClass = userData.class;
+
+      studentNameEl.textContent = studentName;
+      studentClassEl.textContent = studentClass;
+
+      // load available assessments and build dynamic filters
+      await loadPublishedAssessmentsForClass();
+      buildDynamicFilters();
+      renderAssessments(allAssessments);
+    });
+
+    // -------------------------
+    // Load published assessments for student's class
+    // -------------------------
+    async function loadPublishedAssessmentsForClass() {
+      assessmentsList.innerHTML = `<p class="text-gray-500">Loading assessments...</p>`;
+      allAssessments = [];
+      submittedMap = {};
+
+      // Listen to the teacher's saved node: 'theoryBank'
+      const ref = db.ref('theoryBank');
+
+      // Use 'value' so we can derive filters in one pass and pick published ones
+      ref.off();
+      ref.on('value', async snapshot => {
+        allAssessments = [];
+        const data = snapshot.val() || {};
+        // collect published assessments for this class
+        for (const key in data) {
+          const item = data[key];
+          // item.class may be undefined in some records — safe-check
+          if (item && item.published && item.class && item.class === studentClass) {
+            allAssessments.push({ id: key, ...item });
+          }
+        }
+
+        // now build a map of submissions for these assessment IDs for this student
+        await buildSubmittedMap(allAssessments.map(a => a.id));
+
+        // render
+        if (!allAssessments.length) {
+          assessmentsList.innerHTML = `<p class="text-gray-500">No published assessments found for your class.</p>`;
+          clearFilterDropdowns(); // keep filters empty
           return;
         }
 
-        snapshot.forEach(child => {
-          const data = child.val();
-          if (data.class && data.class !== studentClass) return; // Filter by student’s class
-
-          const div = document.createElement("div");
-          div.className = "p-4 border rounded bg-white shadow";
-          div.innerHTML = `
-            <h3 class="font-bold text-lg">${data.assessmentName} - ${data.subject} (${data.term})</h3>
-            <p class="text-sm text-gray-600">Total Score: ${data.totalScore}</p>
-            <button class="bg-blue-600 text-white px-3 py-1 mt-2 rounded"
-              onclick="startAssessment('${child.key}')">Start Assessment</button>
-          `;
-          assessmentsList.appendChild(div);
-        });
+        buildDynamicFilters(); // rebuild filters from the new set
+        renderAssessments(allAssessments);
       });
     }
 
-    // ✅ Start Assessment
-    window.startAssessment = async (id) => {
-      const ref = db.ref(`theoryAssessments/${id}`);
-      const snap = await ref.once("value");
-      if (!snap.exists()) return alert("Assessment not found.");
+    // -------------------------
+    // Build a quick map of whether this student already submitted each assessment
+    // submissions stored at: theorySubmissions/{assessmentId}/{studentUid}
+    // -------------------------
+    async function buildSubmittedMap(assessmentIds) {
+      submittedMap = {};
+      const checks = assessmentIds.map(async aid => {
+        const snap = await db.ref(`theorySubmissions/${aid}/${currentUser.uid}`).once('value');
+        if (snap.exists()) submittedMap[aid] = true;
+      });
+      await Promise.all(checks);
+    }
 
+    // -------------------------
+    // Build dynamic filters from allAssessments (years, subjects, terms)
+    // Only show options that actually exist for this student's class
+    // -------------------------
+    function buildDynamicFilters() {
+      // extract unique values
+      const years = new Set();
+      const subjects = new Set();
+      const terms = new Set();
+
+      allAssessments.forEach(a => {
+        if (a.year) years.add(a.year);
+        if (a.subject) subjects.add(a.subject);
+        if (a.term) terms.add(a.term);
+      });
+
+      // Helper to populate a select
+      function populate(selectEl, valuesSet, defaultLabel) {
+        selectEl.innerHTML = `<option value="">${defaultLabel}</option>`;
+        const list = Array.from(valuesSet).sort();
+        list.forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v;
+          opt.textContent = v;
+          selectEl.appendChild(opt);
+        });
+        // disable if no options
+        selectEl.disabled = list.length === 0;
+      }
+
+      populate(filterYear, years, 'All Years');
+      populate(filterSubject, subjects, 'All Subjects');
+      populate(filterTerm, terms, 'All Terms');
+    }
+
+    function clearFilterDropdowns() {
+      filterYear.innerHTML = `<option value="">All Years</option>`;
+      filterSubject.innerHTML = `<option value="">All Subjects</option>`;
+      filterTerm.innerHTML = `<option value="">All Terms</option>`;
+      filterYear.disabled = filterSubject.disabled = filterTerm.disabled = true;
+    }
+
+    // -------------------------
+    // Render assessments list (applies client-side filters)
+    // -------------------------
+    function renderAssessments(list) {
+      assessmentsList.innerHTML = '';
+
+      // apply current filters
+      const year = filterYear.value;
+      const subject = filterSubject.value;
+      const term = filterTerm.value;
+
+      const filtered = list.filter(a =>
+        (!year || String(a.year) === String(year)) &&
+        (!subject || a.subject === subject) &&
+        (!term || a.term === term)
+      );
+
+      if (!filtered.length) {
+        assessmentsList.innerHTML = `<p class="text-gray-500">No assessments match your filters.</p>`;
+        return;
+      }
+
+      filtered.forEach(a => {
+        const div = document.createElement('div');
+        div.className = 'p-4 border rounded bg-white shadow';
+        const submitted = Boolean(submittedMap[a.id]);
+
+        // Build HTML safely (small dataset, okay to use template strings)
+        div.innerHTML = `
+          <div class="flex items-start justify-between">
+            <div>
+              <h3 class="font-bold text-lg">${escapeHtml(a.assessmentName || a.subject + ' - ' + (a.type || ''))}</h3>
+              <p class="text-sm text-gray-600 mt-1">
+                <strong>Subject:</strong> ${escapeHtml(a.subject || '—')} &nbsp; |
+                <strong>Term:</strong> ${escapeHtml(a.term || '—')} &nbsp; |
+                <strong>Year:</strong> ${escapeHtml(a.year || '—')}
+              </p>
+              <p class="text-sm text-gray-600 mt-1"><strong>Total Score:</strong> ${a.totalScore ?? '—'}</p>
+            </div>
+            <div class="text-right space-y-2">
+              ${submitted ? `<span class="inline-block px-2 py-1 text-sm bg-green-100 text-green-800 rounded">Submitted</span>` : `<span class="inline-block px-2 py-1 text-sm bg-yellow-100 text-yellow-800 rounded">Open</span>`}
+              <div>
+                <button class="startBtn mt-2 bg-blue-600 text-white px-3 py-1 rounded" ${submitted ? 'disabled' : ''} data-id="${a.id}">
+                  ${submitted ? 'View' : 'Start'}
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        assessmentsList.appendChild(div);
+
+        // attach click handler
+        const btn = div.querySelector('.startBtn');
+        btn.addEventListener('click', () => startAssessment(a.id, submitted));
+      });
+    }
+
+    // simple HTML escape to avoid injection when building innerHTML
+    function escapeHtml(s) {
+      if (s === undefined || s === null) return '';
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // -------------------------
+    // Start (or View) assessment
+    // If the student already submitted, open read-only view
+    // -------------------------
+    async function startAssessment(assessmentId, alreadySubmitted) {
+      const snap = await db.ref(`theoryBank/${assessmentId}`).once('value');
+      if (!snap.exists()) return alert('Assessment not found.');
       const data = snap.val();
 
-      // Render theory assessment form
+      // Build assessment UI with student details and appropriate read-only / editable mode
+      const readOnly = alreadySubmitted;
+
+      // If readOnly, fetch submission to show answers too
+      let existingSubmission = null;
+      if (readOnly) {
+        const subSnap = await db.ref(`theorySubmissions/${assessmentId}/${currentUser.uid}`).once('value');
+        existingSubmission = subSnap.exists() ? subSnap.val() : null;
+      }
+
+      // Render
       assessmentsList.innerHTML = `
         <div class="bg-white p-6 rounded shadow">
-          <h2 class="text-2xl font-bold mb-4">${data.assessmentName} - ${data.subject} (${data.term})</h2>
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <h2 class="text-2xl font-bold">${escapeHtml(data.assessmentName || data.subject)}</h2>
+              <p class="text-gray-600">${escapeHtml(data.subject)} • ${escapeHtml(data.class)} • ${escapeHtml(data.term)} • ${escapeHtml(data.year)}</p>
+              <p class="text-sm mt-2"><strong>Student:</strong> ${escapeHtml(studentName)} (${escapeHtml(studentClass)})</p>
+            </div>
+            <div class="text-right">
+              ${readOnly ? `<span class="inline-block px-3 py-1 bg-green-100 text-green-800 rounded">Already Submitted</span>` : `<span class="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 rounded">Open</span>`}
+              <button id="backBtn" class="ml-3 text-sm text-gray-600 hover:underline">Back</button>
+            </div>
+          </div>
+
           <form id="answerForm" class="space-y-4">
-            ${data.questions.map((q, i) => `
+            ${Array.isArray(data.questions) && data.questions.length ? data.questions.map((q, i) => `
               <div>
-                <p class="font-medium">${i + 1}. ${q.text} <span class="text-gray-500">(Score: ${q.score})</span></p>
-                <textarea class="w-full p-2 border rounded answerBox" rows="3" placeholder="Type your answer here..."></textarea>
+                <p class="font-medium mb-1">${i+1}. ${escapeHtml(q.text)} <span class="text-gray-500">(Score: ${q.score})</span></p>
+                ${ readOnly
+                    ? `<div class="p-3 border rounded bg-gray-50 text-gray-800">${escapeHtml((existingSubmission?.answers?.[i]?.answer) || 'No answer submitted')}</div>`
+                    : `<textarea name="answer_${i}" class="w-full p-2 border rounded answerBox" rows="4" placeholder="Type your answer here..."></textarea>`
+                }
               </div>
-            `).join("")}
-            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">Submit Answers</button>
+            `).join('') : `<p class="text-gray-600">No questions found for this assessment.</p>`}
+
+            ${ readOnly ? '' : `<div><button type="submit" class="bg-green-600 text-white px-4 py-2 rounded">Submit Answers</button></div>` }
           </form>
         </div>
       `;
 
-      // ✅ Handle submission
-      document.getElementById("answerForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        const answers = [];
-        document.querySelectorAll(".answerBox").forEach((a, i) => {
-          answers.push({
-            question: data.questions[i].text,
-            answer: a.value.trim(),
-            expectedScore: data.questions[i].score
-          });
-        });
-
-        await db.ref("theorySubmissions").push({
-          studentName,
-          studentClass,
-          assessmentId: id,
-          assessmentName: data.assessmentName,
-          subject: data.subject,
-          term: data.term,
-          answers,
-          submittedAt: new Date().toISOString(),
-          graded: false
-        });
-
-        alert("Your answers have been submitted successfully!");
-        location.reload();
+      // back button
+      document.getElementById('backBtn').addEventListener('click', () => {
+        renderAssessments(allAssessments);
       });
-    };
+
+      // handle submit if not readOnly
+      if (!readOnly) {
+        document.getElementById('answerForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+
+          // collect answers
+          const answers = [];
+          const textareas = document.querySelectorAll('.answerBox');
+          textareas.forEach((ta, idx) => {
+            answers.push({
+              question: data.questions[idx]?.text || '',
+              answer: ta.value.trim(),
+              expectedScore: data.questions[idx]?.score || 0
+            });
+          });
+
+          // Save under theorySubmissions/{assessmentId}/{studentUid} to make lookups easy and prevent duplicates
+          const submissionRef = db.ref(`theorySubmissions/${assessmentId}/${currentUser.uid}`);
+          const now = new Date().toISOString();
+
+          await submissionRef.set({
+            studentName,
+            studentClass,
+            studentUid: currentUser.uid,
+            assessmentId,
+            assessmentName: data.assessmentName || data.subject,
+            subject: data.subject,
+            term: data.term,
+            year: data.year,
+            answers,
+            submittedAt: now,
+            graded: false
+          });
+
+          // mark in local map and re-render list
+          submittedMap[assessmentId] = true;
+          alert('Your answers have been submitted successfully!');
+          // go back to list (re-render ensures submitted badge shows)
+          renderAssessments(allAssessments);
+        }, { once: true });
+      }
+    }
+
+    // -------------------------
+    // Filters: re-render when changed
+    // -------------------------
+    [filterYear, filterSubject, filterTerm].forEach(s => {
+      s.addEventListener('change', () => renderAssessments(allAssessments));
+    });
+
+    clearFiltersBtn.addEventListener('click', () => {
+      filterYear.value = '';
+      filterSubject.value = '';
+      filterTerm.value = '';
+      renderAssessments(allAssessments);
+    });
+
   </script>
 </body>
 </html>
