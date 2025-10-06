@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teacher – Grade Submissions | Bright Future Academy</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teacher – Grade Submissions</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -20,20 +20,24 @@
     <button id="logoutBtn" class="bg-red-600 text-white px-4 py-2 rounded">Logout</button>
   </div>
 
-  <!-- Filters (Populated Dynamically) -->
+  <!-- Filters -->
   <div class="bg-white p-4 rounded shadow mb-6">
-    <h2 class="font-semibold mb-3">Filter assessments</h2>
+    <h2 class="font-semibold mb-3">Filter Assessments</h2>
     <div class="flex flex-wrap gap-3">
-      <select id="filterYear" class="border p-2 rounded" aria-label="Filter by year">
+      <select id="filterYear" class="border p-2 rounded">
         <option value="">All Years</option>
       </select>
 
-      <select id="filterSubject" class="border p-2 rounded" aria-label="Filter by subject">
+      <select id="filterTerm" class="border p-2 rounded">
+        <option value="">All Terms</option>
+      </select>
+
+      <select id="filterSubject" class="border p-2 rounded">
         <option value="">All Subjects</option>
       </select>
 
-      <select id="filterTerm" class="border p-2 rounded" aria-label="Filter by term">
-        <option value="">All Terms</option>
+      <select id="filterType" class="border p-2 rounded">
+        <option value="">All Types</option>
       </select>
 
       <button id="clearFilters" class="bg-gray-200 px-3 py-2 rounded">Clear</button>
@@ -50,6 +54,7 @@
           <th class="p-3 border">Year</th>
           <th class="p-3 border">Subject</th>
           <th class="p-3 border">Term</th>
+          <th class="p-3 border">Type</th>
           <th class="p-3 border">Assessment</th>
           <th class="p-3 border">Status</th>
           <th class="p-3 border">Score</th>
@@ -75,7 +80,7 @@
   </div>
 
   <script>
-    // --- Firebase Config ---
+    // Firebase Setup
     const firebaseConfig = {
       apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
       authDomain: "school-6425b.firebaseapp.com",
@@ -89,7 +94,7 @@
     const auth = firebase.auth();
     const db = firebase.database();
 
-    // DOM references
+    // DOM References
     const submissionsTable = document.getElementById("submissionsTable");
     const gradingModal = document.getElementById("gradingModal");
     const gradingContent = document.getElementById("gradingContent");
@@ -98,10 +103,11 @@
     const filterYear = document.getElementById("filterYear");
     const filterTerm = document.getElementById("filterTerm");
     const filterSubject = document.getElementById("filterSubject");
-    const clearFiltersBtn = document.getElementById("clearFilters");
+    const filterType = document.getElementById("filterType");
     const avgDisplay = document.getElementById("avgDisplay");
+    const clearFiltersBtn = document.getElementById("clearFilters");
 
-    let teacherClass = "";
+    let teacherClass = "", teacherYear = "";
     let allSubmissions = [];
     let currentSubmission = null;
 
@@ -111,27 +117,30 @@
     });
 
     // Auth
-    auth.onAuthStateChanged(async user => {
-      if (!user) return window.location.href = "login.html";
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) return (window.location.href = "login.html");
 
       const snap = await db.ref(`users/${user.uid}`).once("value");
       const teacher = snap.val();
       if (!teacher || teacher.role !== "teacher") {
         alert("Access denied.");
-        return window.location.href = "dashboard.html";
+        return (window.location.href = "dashboard.html");
       }
 
       teacherClass = teacher.class || "";
+      teacherYear = teacher.year || "";
+
       loadSubmissions();
     });
 
-    // Load submissions
+    // Load Submissions for Teacher’s Class
     async function loadSubmissions() {
-      submissionsTable.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-gray-500">Loading...</td></tr>`;
+      submissionsTable.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-gray-500">Loading...</td></tr>`;
       const theorySnap = await db.ref("theorySubmissions").once("value");
       const data = theorySnap.val() || {};
 
       allSubmissions = [];
+
       Object.entries(data).forEach(([assessmentId, studentSubs]) => {
         Object.entries(studentSubs).forEach(([uid, sub]) => {
           if (sub.studentClass === teacherClass) {
@@ -141,7 +150,7 @@
       });
 
       if (!allSubmissions.length) {
-        submissionsTable.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-gray-500">No submissions found for your class.</td></tr>`;
+        submissionsTable.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-gray-500">No submissions found for your class.</td></tr>`;
         return;
       }
 
@@ -149,38 +158,48 @@
       renderSubmissions();
     }
 
-    // Populate filters
+    // Populate Filters
     function populateFilters() {
-      const years = [...new Set(allSubmissions.map(s => s.year))];
-      const terms = [...new Set(allSubmissions.map(s => s.term))];
-      const subjects = [...new Set(allSubmissions.map(s => s.subject))];
+      const years = [...new Set(allSubmissions.map((s) => s.year))];
+      const terms = [...new Set(allSubmissions.map((s) => s.term))];
+      const subjects = [...new Set(allSubmissions.map((s) => s.subject))];
+      const types = [...new Set(allSubmissions.map((s) => s.type))];
 
       fillDropdown(filterYear, years);
       fillDropdown(filterTerm, terms);
       fillDropdown(filterSubject, subjects);
+      fillDropdown(filterType, types);
+
+      // Auto-fill teacher's year if available
+      if (teacherYear && !filterYear.value) {
+        filterYear.innerHTML = `<option>${teacherYear}</option>`;
+        filterYear.disabled = true;
+      }
     }
 
     function fillDropdown(select, items) {
-      select.innerHTML = `<option value="">All</option>` + 
+      select.innerHTML = `<option value="">All</option>` +
         items.map(v => `<option value="${v}">${v}</option>`).join("");
     }
 
-    // Render table
+    // Render Table
     function renderSubmissions() {
       const year = filterYear.value;
       const term = filterTerm.value;
       const subject = filterSubject.value;
+      const type = filterType.value;
 
       const filtered = allSubmissions.filter(s =>
         (!year || s.year === year) &&
         (!term || s.term === term) &&
-        (!subject || s.subject === subject)
+        (!subject || s.subject === subject) &&
+        (!type || s.type === type)
       );
 
       submissionsTable.innerHTML = "";
 
       if (!filtered.length) {
-        submissionsTable.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-gray-500">No matching submissions.</td></tr>`;
+        submissionsTable.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-gray-500">No matching submissions.</td></tr>`;
         avgDisplay.innerHTML = "";
         return;
       }
@@ -192,9 +211,10 @@
         tr.innerHTML = `
           <td class="p-3 border">${sub.studentName}</td>
           <td class="p-3 border">${sub.studentClass}</td>
-          <td class="p-3 border">${sub.year || '-'}</td>
+          <td class="p-3 border">${sub.year}</td>
           <td class="p-3 border">${sub.subject}</td>
           <td class="p-3 border">${sub.term}</td>
+          <td class="p-3 border">${sub.type || '-'}</td>
           <td class="p-3 border">${sub.assessmentName}</td>
           <td class="p-3 border ${sub.graded ? 'text-green-600' : 'text-red-600'}">${sub.graded ? 'Graded' : 'Pending'}</td>
           <td class="p-3 border">${sub.totalScore ?? '-'}</td>
@@ -210,7 +230,7 @@
       attachGradeEvents();
     }
 
-    // Grade buttons
+    // Grade Buttons
     function attachGradeEvents() {
       document.querySelectorAll(".gradeBtn").forEach(btn => {
         btn.addEventListener("click", async () => {
@@ -238,14 +258,16 @@
       gradingModal.classList.remove("hidden");
     }
 
-    // Save scores
+    // Save Scores
     saveScoresBtn.addEventListener("click", async () => {
       const inputs = gradingContent.querySelectorAll(".scoreInput");
       let total = 0;
       const updated = currentSubmission.answers.map((a, i) => {
-        const input = inputs[i];
-        const score = Number(input.value) || 0;
-        if (score > a.expectedScore) return alert(`Q${i + 1}: max ${a.expectedScore}`);
+        const score = Number(inputs[i].value) || 0;
+        if (score > a.expectedScore) {
+          alert(`Q${i + 1}: max ${a.expectedScore}`);
+          throw new Error();
+        }
         total += score;
         return { ...a, score };
       });
@@ -260,15 +282,12 @@
     });
 
     closeModalBtn.addEventListener("click", () => gradingModal.classList.add("hidden"));
-
-    // Filter events
-    [filterYear, filterTerm, filterSubject].forEach(sel => sel.addEventListener("change", renderSubmissions));
     clearFiltersBtn.addEventListener("click", () => {
-      filterYear.value = "";
-      filterTerm.value = "";
-      filterSubject.value = "";
+      [filterYear, filterTerm, filterSubject, filterType].forEach(s => s.value = "");
       renderSubmissions();
     });
+
+    [filterYear, filterTerm, filterSubject, filterType].forEach(sel => sel.addEventListener("change", renderSubmissions));
   </script>
 </body>
 </html>
