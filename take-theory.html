@@ -369,19 +369,22 @@
           const submissionRef = db.ref(`theorySubmissions/${assessmentId}/${currentUser.uid}`);
           const now = new Date().toISOString();
 
-          await submissionRef.set({
-            studentName,
-            studentClass,
-            studentUid: currentUser.uid,
-            assessmentId,
-            assessmentName: data.assessmentName || data.subject,
-            subject: data.subject,
-            term: data.term,
-            year: data.year,
-            answers,
-            submittedAt: now,
-            graded: false
-          });
+await submissionRef.set({
+  studentName,
+  studentClass,
+  studentUid: currentUser.uid,
+  assessmentId,
+  assessmentName: data.assessmentName || data.subject,
+  subject: data.subject,
+  type: data.type || 'Unspecified',
+  term: data.term,
+  year: data.year,
+  totalScore: data.totalScore || 0,
+  answers,
+  submittedAt: now,
+  graded: false
+});
+
 
           // mark in local map and re-render list
           submittedMap[assessmentId] = true;
@@ -409,3 +412,4 @@
   </script>
 </body>
 </html>
+
