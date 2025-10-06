@@ -133,6 +133,15 @@
       await generateBroadsheet(year, term);
     });
 
+    function getGrade(avg) {
+      if (avg >= 70) return "A";
+      if (avg >= 60) return "B";
+      if (avg >= 50) return "C";
+      if (avg >= 45) return "D";
+      if (avg >= 40) return "E";
+      return "F";
+    }
+
     async function generateBroadsheet(year, term) {
       tableContainer.classList.add("hidden");
       summaryContainer.classList.add("hidden");
@@ -159,12 +168,16 @@
         return;
       }
 
-      // Header row with grouped subject titles
-      let header = `<tr><th rowspan="2" class="p-3 border bg-blue-100 text-left font-semibold">Student</th>`;
+      // Header with grouped subjects + Total/Average/Grade
+      let header = `<tr>
+        <th rowspan="2" class="p-3 border bg-blue-100 text-left font-semibold">Student</th>`;
       subjects.forEach(subject => {
         header += `<th colspan="${types.length}" class="p-3 border bg-blue-100 text-center font-semibold">${subject}</th>`;
       });
-      header += "</tr><tr class='bg-blue-50'>";
+      header += `<th rowspan="2" class="p-3 border bg-blue-100 text-center font-semibold">Total</th>
+                 <th rowspan="2" class="p-3 border bg-blue-100 text-center font-semibold">Average</th>
+                 <th rowspan="2" class="p-3 border bg-blue-100 text-center font-semibold">Grade</th>
+                 </tr><tr class="bg-blue-50">`;
       subjects.forEach(() => {
         types.forEach(type => {
           header += `<th class="p-2 border text-center text-[11px] font-medium">${type}</th>`;
@@ -186,10 +199,18 @@
 
       for (const student in grouped) {
         let row = `<tr class="even:bg-gray-50 hover:bg-gray-100 transition"><td class="p-3 border font-semibold text-gray-800">${student}</td>`;
+        let grandTotal = 0;
+        let subjectCount = 0;
+
         subjects.forEach(subject => {
           const scores = grouped[student][subject] || {};
           const validScores = Object.values(scores).filter(s => typeof s === "number");
-          const avg = validScores.length ? (validScores.reduce((a,b)=>a+b,0)/validScores.length) : null;
+          const avg = validScores.length ? (validScores.reduce((a,b)=>a+b,0)/validScores.length) : 0;
+
+          if (avg > 0) {
+            grandTotal += avg;
+            subjectCount++;
+          }
 
           if (!subjectStats[subject]) subjectStats[subject] = [];
           if (avg) subjectStats[subject].push(avg);
@@ -198,7 +219,16 @@
             row += `<td class="p-2 border text-center text-gray-700">${scores[t] ?? "-"}</td>`;
           });
         });
-        row += "</tr>";
+
+        const overallAvg = subjectCount ? (grandTotal / subjectCount).toFixed(2) : 0;
+        const grade = getGrade(overallAvg);
+
+        row += `
+          <td class="p-2 border text-center font-semibold text-gray-800">${grandTotal.toFixed(2)}</td>
+          <td class="p-2 border text-center text-gray-700">${overallAvg}</td>
+          <td class="p-2 border text-center font-semibold ${grade === "A" ? "text-green-600" : grade === "B" ? "text-blue-600" : grade === "C" ? "text-yellow-600" : grade === "D" ? "text-orange-600" : "text-red-600"}">${grade}</td>
+        </tr>`;
+
         tbody.insertAdjacentHTML("beforeend", row);
       }
 
