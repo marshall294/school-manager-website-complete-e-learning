@@ -1,107 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Theory Boardsheet</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <style>
-    body {
-      font-family: 'Poppins', sans-serif;
-      background: #f9fafb;
-      margin: 0;
-      padding: 20px;
-    }
-    .filter-box {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 20px;
-      align-items: center;
-    }
-    select, button {
-      padding: 8px 12px;
-      font-size: 14px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      overflow-x: auto;
-      display: block;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px 14px;
-      text-align: center;
-      white-space: nowrap;
-    }
-    th {
-      background: #2563eb;
-      color: #fff;
-      position: sticky;
-      top: 0;
-      z-index: 2;
-    }
-    tr:nth-child(even) { background-color: #f3f4f6; }
-    .scroll-container {
-      overflow-x: auto;
-      border-radius: 8px;
-      box-shadow: 0 0 6px rgba(0,0,0,0.1);
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Theory Broadsheet | Teacher Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
-<body>
-  <h2>Theory Boardsheet</h2>
+<body class="bg-gray-100 min-h-screen p-4">
 
-  <div class="filter-box">
-    <label>Academic Year:</label>
-    <select id="filterYear">
-      <option value="">Select Year</option>
-      <option value="2025-2026">2025–2026</option>
-      <option value="2026-2027">2026–2027</option>
-      <option value="2027-2028">2027–2028</option>
-      <option value="2028-2029">2028–2029</option>
-      <option value="2029-2030">2029–2030</option>
-    </select>
-
-    <label>Term:</label>
-    <select id="filterTerm">
-      <option value="">Select Term</option>
-      <option value="1st Term">1st Term</option>
-      <option value="2nd Term">2nd Term</option>
-      <option value="3rd Term">3rd Term</option>
-    </select>
-
-    <button onclick="loadBoardSheet()">Load Boardsheet</button>
+  <!-- Header -->
+  <div class="flex justify-between items-center mb-6">
+    <div>
+      <h1 class="text-2xl font-bold">Bright Future Academy</h1>
+      <p class="text-gray-600">Theory Broadsheet Summary</p>
+    </div>
+    <button id="logoutBtn" class="bg-red-600 text-white px-4 py-2 rounded">Logout</button>
   </div>
 
-  <div class="scroll-container">
-    <table id="boardsheetTable">
-      <thead>
-        <tr id="tableHeader">
-          <th>Student Name</th>
-          <th>Class</th>
-          <th>Subject</th>
-          <th>CA 1</th>
-          <th>CA 2</th>
-          <th>Homework</th>
-          <th>Project</th>
-          <th>Examination</th>
-          <th>Highest</th>
-          <th>Lowest</th>
-          <th>Class Average</th>
-        </tr>
-      </thead>
-      <tbody id="boardsheetBody"></tbody>
+  <!-- Filters -->
+  <div class="bg-white p-4 rounded shadow mb-6">
+    <h2 class="font-semibold mb-3">Filter by Academic Year and Term</h2>
+    <div class="flex flex-wrap gap-3">
+      <select id="filterYear" class="border p-2 rounded">
+        <option value="">Select Academic Year</option>
+        <option value="2025-2026">2025–2026</option>
+        <option value="2026-2027">2026–2027</option>
+        <option value="2027-2028">2027–2028</option>
+        <option value="2028-2029">2028–2029</option>
+        <option value="2029-2030">2029–2030</option>
+      </select>
+
+      <select id="filterTerm" class="border p-2 rounded">
+        <option value="">Select Term</option>
+        <option>First Term</option>
+        <option>Second Term</option>
+        <option>Third Term</option>
+      </select>
+
+      <button id="generateBtn" class="bg-blue-600 text-white px-4 py-2 rounded">Generate Broadsheet</button>
+    </div>
+  </div>
+
+  <!-- Teacher Info -->
+  <div class="bg-white p-4 rounded shadow mb-6">
+    <p><strong>Teacher Class:</strong> <span id="teacherClassDisplay" class="text-blue-700"></span></p>
+  </div>
+
+  <!-- Broadsheet Table -->
+  <div id="tableContainer" class="overflow-x-auto bg-white p-4 rounded shadow hidden">
+    <table class="min-w-full text-sm border-collapse">
+      <thead id="thead"></thead>
+      <tbody id="tbody"></tbody>
     </table>
   </div>
 
+  <!-- Summary Section -->
+  <div id="summaryContainer" class="mt-6 hidden bg-white p-4 rounded shadow"></div>
+
   <script>
-    // ✅ Firebase Configuration
+    // Firebase Setup
     const firebaseConfig = {
       apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
       authDomain: "school-6425b.firebaseapp.com",
@@ -115,70 +75,130 @@
     const auth = firebase.auth();
     const db = firebase.database();
 
-    let studentClass = "";
-    let teacherName = "";
+    const subjects = [
+      "Science", "Home Economics", "Geography", "Agricultural Science", "Mathematics",
+      "Civic Education", "English Studies", "History", "Christian Religious Studies",
+      "Islam Religious Studies", "Information and Communication Technology",
+      "Personal Social and Health Education", "General Knowledge"
+    ];
 
-    auth.onAuthStateChanged(user => {
-      if (!user) return window.location.href = "login.html";
-      db.ref(`users/${user.uid}`).once('value').then(snap => {
-        const data = snap.val() || {};
-        if (data.role !== 'teacher') return alert("Access denied.");
-        studentClass = data.class;
-        teacherName = data.name;
-      });
+    const types = ["CA 1", "CA 2", "Examination", "Homework", "Project"];
+
+    const filterYear = document.getElementById("filterYear");
+    const filterTerm = document.getElementById("filterTerm");
+    const generateBtn = document.getElementById("generateBtn");
+    const tableContainer = document.getElementById("tableContainer");
+    const summaryContainer = document.getElementById("summaryContainer");
+    const thead = document.getElementById("thead");
+    const tbody = document.getElementById("tbody");
+    const teacherClassDisplay = document.getElementById("teacherClassDisplay");
+
+    let teacherClass = "";
+
+    // Logout
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      auth.signOut().then(() => window.location.href = "login.html");
     });
 
-    async function loadBoardSheet() {
-      const year = document.getElementById("filterYear").value;
-      const term = document.getElementById("filterTerm").value;
-      const tbody = document.getElementById("boardsheetBody");
-      tbody.innerHTML = "";
+    // Auth Check
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) return (window.location.href = "login.html");
 
-      if (!year || !term) return alert("Select academic year and term.");
+      const snap = await db.ref(`users/${user.uid}`).once("value");
+      const teacher = snap.val();
+      if (!teacher || teacher.role !== "teacher") {
+        alert("Access denied.");
+        return (window.location.href = "dashboard.html");
+      }
 
-      const subjects = [
-        "Science","Home Economics","Geography","Agricultural Science","Mathematics",
-        "Civic Education","English Studies","History","Christian Religious Studies",
-        "Islam Religious Studies","Information and Communication Technology",
-        "Personal Social and Health Education","General Knowledge"
-      ];
+      teacherClass = teacher.class || "";
+      teacherClassDisplay.textContent = teacherClass || "Not Assigned";
+    });
 
-      // Fetch students from the class
-      const snap = await db.ref(`results/${year}/${term}/${studentClass}`).get();
-      const results = snap.val() || {};
+    generateBtn.addEventListener("click", async () => {
+      const year = filterYear.value;
+      const term = filterTerm.value;
+      if (!year || !term) return alert("Please select both year and term.");
 
-      Object.keys(results).forEach(studentName => {
-        subjects.forEach(subject => {
-          const subjData = results[studentName]?.[subject] || {};
-          const ca1 = parseFloat(subjData["CA 1"] || 0).toFixed(2);
-          const ca2 = parseFloat(subjData["CA 2"] || 0).toFixed(2);
-          const hw = parseFloat(subjData["Homework"] || 0).toFixed(2);
-          const proj = parseFloat(subjData["Project"] || 0).toFixed(2);
-          const exam = parseFloat(subjData["Examination"] || 0).toFixed(2);
+      await generateBroadsheet(year, term);
+    });
 
-          const scores = [ca1, ca2, hw, proj, exam].map(Number);
-          const highest = Math.max(...scores).toFixed(2);
-          const lowest = Math.min(...scores).toFixed(2);
-          const average = (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(2);
+    async function generateBroadsheet(year, term) {
+      tableContainer.classList.add("hidden");
+      summaryContainer.classList.add("hidden");
 
-          const row = `
-            <tr>
-              <td>${studentName}</td>
-              <td>${studentClass}</td>
-              <td>${subject}</td>
-              <td>${ca1}</td>
-              <td>${ca2}</td>
-              <td>${hw}</td>
-              <td>${proj}</td>
-              <td>${exam}</td>
-              <td>${highest}</td>
-              <td>${lowest}</td>
-              <td>${average}</td>
-            </tr>
-          `;
-          tbody.innerHTML += row;
+      const snap = await db.ref("theorySubmissions").once("value");
+      const data = snap.val() || {};
+
+      const submissions = [];
+
+      Object.entries(data).forEach(([assId, studentSubs]) => {
+        Object.entries(studentSubs).forEach(([uid, sub]) => {
+          if (
+            sub.studentClass === teacherClass &&
+            sub.year === year &&
+            sub.term === term
+          ) {
+            submissions.push(sub);
+          }
         });
       });
+
+      if (!submissions.length) {
+        alert("No submissions found for this class and term.");
+        return;
+      }
+
+      // Header
+      let header = `<tr class="bg-gray-200"><th class="p-2 border">Student</th>`;
+      subjects.forEach(subject => {
+        header += `<th class="p-2 border text-center">${subject}<br><span class="text-xs text-gray-500">(CA1 / CA2 / Exam / HW / Proj)</span></th>`;
+      });
+      header += "</tr>";
+      thead.innerHTML = header;
+
+      // Group by student
+      const grouped = {};
+      submissions.forEach(s => {
+        if (!grouped[s.studentName]) grouped[s.studentName] = {};
+        if (!grouped[s.studentName][s.subject]) grouped[s.studentName][s.subject] = {};
+        grouped[s.studentName][s.subject][s.type] = s.totalScore || 0;
+      });
+
+      tbody.innerHTML = "";
+      const subjectStats = {};
+
+      for (const student in grouped) {
+        let row = `<tr><td class="p-2 border font-semibold">${student}</td>`;
+        subjects.forEach(subject => {
+          const scores = grouped[student][subject] || {};
+          const cellScores = types.map(t => scores[t] ?? "-");
+          const validScores = Object.values(scores).filter(s => typeof s === "number");
+          const avg = validScores.length ? (validScores.reduce((a,b)=>a+b,0)/validScores.length) : null;
+
+          if (!subjectStats[subject]) subjectStats[subject] = [];
+          if (avg) subjectStats[subject].push(avg);
+
+          row += `<td class="p-2 border text-center">${cellScores.join(" / ")}</td>`;
+        });
+        row += "</tr>";
+        tbody.insertAdjacentHTML("beforeend", row);
+      }
+
+      // Summary section
+      let summaryHtml = `<h3 class="font-semibold text-lg mb-2">Class Summary (${teacherClass}, ${term}, ${year})</h3>`;
+      summaryHtml += `<div class="overflow-x-auto"><table class="min-w-full text-sm border-collapse"><thead><tr class="bg-gray-100"><th class="border p-2">Subject</th><th class="border p-2">Highest</th><th class="border p-2">Lowest</th><th class="border p-2">Average</th></tr></thead><tbody>`;
+      for (const [subject, arr] of Object.entries(subjectStats)) {
+        const high = Math.max(...arr);
+        const low = Math.min(...arr);
+        const avg = (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(2);
+        summaryHtml += `<tr><td class="border p-2">${subject}</td><td class="border p-2">${high}</td><td class="border p-2">${low}</td><td class="border p-2">${avg}</td></tr>`;
+      }
+      summaryHtml += "</tbody></table></div>";
+
+      summaryContainer.innerHTML = summaryHtml;
+      tableContainer.classList.remove("hidden");
+      summaryContainer.classList.remove("hidden");
     }
   </script>
 </body>
