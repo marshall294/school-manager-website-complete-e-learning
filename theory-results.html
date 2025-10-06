@@ -1,1 +1,255 @@
-<!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8" /> <meta name="viewport" content="width=device-width, initial-scale=1.0" /> <title>Theory Broadsheet | Teacher Dashboard</title> <script src="https://cdn.tailwindcss.com"></script> <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script> <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script> <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script> </head> <body class="bg-gray-100 min-h-screen p-6"> <!-- Header --> <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-lg shadow mb-6"> <div> <h1 class="text-2xl font-bold text-gray-800">Bright Future Academy</h1> <p class="text-gray-500">Theory Broadsheet Summary</p> </div> <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 transition text-white px-5 py-2 rounded mt-3 sm:mt-0"> Logout </button> </header> <!-- Filters --> <section class="bg-white p-5 rounded-lg shadow mb-6"> <h2 class="font-semibold text-lg text-gray-700 mb-4">Filter by Academic Year and Term</h2> <div class="flex flex-wrap gap-4"> <select id="filterYear" class="border border-gray-300 focus:ring-2 focus:ring-blue-400 p-2 rounded-lg text-gray-700"> <option value="">Select Academic Year</option> <option value="2025-2026">2025–2026</option> <option value="2026-2027">2026–2027</option> <option value="2027-2028">2027–2028</option> <option value="2028-2029">2028–2029</option> <option value="2029-2030">2029–2030</option> </select> <select id="filterTerm" class="border border-gray-300 focus:ring-2 focus:ring-blue-400 p-2 rounded-lg text-gray-700"> <option value="">Select Term</option> <option>First Term</option> <option>Second Term</option> <option>Third Term</option> </select> <button id="generateBtn" class="bg-blue-600 hover:bg-blue-700 transition text-white px-5 py-2 rounded-lg"> Generate Broadsheet </button> </div> </section> <!-- Teacher Info --> <section class="bg-white p-5 rounded-lg shadow mb-6"> <p class="text-gray-700"> <strong class="font-medium text-gray-800">Teacher Class:</strong> <span id="teacherClassDisplay" class="text-blue-700 font-semibold"></span> </p> </section> <!-- Broadsheet Table --> <section id="tableContainer" class="overflow-x-auto bg-white p-5 rounded-lg shadow hidden"> <h3 class="text-lg font-semibold text-gray-700 mb-3 border-b pb-2">Student Broadsheet</h3> <table class="min-w-full text-sm border-collapse border border-gray-200 rounded-lg overflow-hidden"> <thead id="thead" class="bg-blue-50 text-gray-700 text-xs uppercase tracking-wide"></thead> <tbody id="tbody" class="text-gray-700"></tbody> </table> </section> <!-- Summary Section --> <section id="summaryContainer" class="mt-8 hidden bg-white p-5 rounded-lg shadow"> <h3 class="font-semibold text-lg text-gray-800 mb-4 border-b pb-2">Summary</h3> </section> <script> // Firebase Setup const firebaseConfig = { apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0", authDomain: "school-6425b.firebaseapp.com", databaseURL: "https://school-6425b-default-rtdb.firebaseio.com", projectId: "school-6425b", storageBucket: "school-6425b.appspot.com", messagingSenderId: "929265479935", appId: "1:929265479935:web:af45ea5968ee50258a1cca" }; firebase.initializeApp(firebaseConfig); const auth = firebase.auth(); const db = firebase.database(); const subjects = [ "Science", "Home Economics", "Geography", "Agricultural Science", "Mathematics", "Civic Education", "English Studies", "History", "Christian Religious Studies", "Islam Religious Studies", "Information and Communication Technology", "Personal Social and Health Education", "General Knowledge" ]; const types = ["CA 1", "CA 2", "Examination", "Homework", "Project"]; const filterYear = document.getElementById("filterYear"); const filterTerm = document.getElementById("filterTerm"); const generateBtn = document.getElementById("generateBtn"); const tableContainer = document.getElementById("tableContainer"); const summaryContainer = document.getElementById("summaryContainer"); const thead = document.getElementById("thead"); const tbody = document.getElementById("tbody"); const teacherClassDisplay = document.getElementById("teacherClassDisplay"); let teacherClass = ""; // Logout document.getElementById("logoutBtn").addEventListener("click", () => { auth.signOut().then(() => window.location.href = "login.html"); }); // Auth Check auth.onAuthStateChanged(async (user) => { if (!user) return (window.location.href = "login.html"); const snap = await db.ref(users/${user.uid}).once("value"); const teacher = snap.val(); if (!teacher || teacher.role !== "teacher") { alert("Access denied."); return (window.location.href = "dashboard.html"); } teacherClass = teacher.class || ""; teacherClassDisplay.textContent = teacherClass || "Not Assigned"; }); generateBtn.addEventListener("click", async () => { const year = filterYear.value; const term = filterTerm.value; if (!year || !term) return alert("Please select both year and term."); await generateBroadsheet(year, term); }); function getGrade(avg) { if (avg >= 70) return "A"; if (avg >= 60) return "B"; if (avg >= 50) return "C"; if (avg >= 45) return "D"; if (avg >= 40) return "E"; return "F"; } async function generateBroadsheet(year, term) { tableContainer.classList.add("hidden"); summaryContainer.classList.add("hidden"); const snap = await db.ref("theorySubmissions").once("value"); const data = snap.val() || {}; const submissions = []; Object.entries(data).forEach(([assId, studentSubs]) => { Object.entries(studentSubs).forEach(([uid, sub]) => { if ( sub.studentClass === teacherClass && sub.year === year && sub.term === term ) { submissions.push(sub); } }); }); if (!submissions.length) { alert("No submissions found for this class and term."); return; } // Header with grouped subjects + Total/Average/Grade let header = <tr> <th rowspan="2" class="p-3 border bg-blue-100 text-left font-semibold">Student</th>; subjects.forEach(subject => { header += <th colspan="${types.length}" class="p-3 border bg-blue-100 text-center font-semibold">${subject}</th>; }); header += <th rowspan="2" class="p-3 border bg-blue-100 text-center font-semibold">Total</th> <th rowspan="2" class="p-3 border bg-blue-100 text-center font-semibold">Average</th> <th rowspan="2" class="p-3 border bg-blue-100 text-center font-semibold">Grade</th> </tr><tr class="bg-blue-50">; subjects.forEach(() => { types.forEach(type => { header += <th class="p-2 border text-center text-[11px] font-medium">${type}</th>; }); }); header += "</tr>"; thead.innerHTML = header; // Group by student const grouped = {}; submissions.forEach(s => { if (!grouped[s.studentName]) grouped[s.studentName] = {}; if (!grouped[s.studentName][s.subject]) grouped[s.studentName][s.subject] = {}; grouped[s.studentName][s.subject][s.type] = s.totalScore || 0; }); tbody.innerHTML = ""; const subjectStats = {}; for (const student in grouped) { let row = <tr class="even:bg-gray-50 hover:bg-gray-100 transition"><td class="p-3 border font-semibold text-gray-800">${student}</td>; let grandTotal = 0; let subjectCount = 0; subjects.forEach(subject => { const scores = grouped[student][subject] || {}; const validScores = Object.values(scores).filter(s => typeof s === "number"); const avg = validScores.length ? (validScores.reduce((a,b)=>a+b,0)/validScores.length) : 0; if (avg > 0) { grandTotal += avg; subjectCount++; } if (!subjectStats[subject]) subjectStats[subject] = []; if (avg) subjectStats[subject].push(avg); types.forEach(t => { row += <td class="p-2 border text-center text-gray-700">${scores[t] ?? "-"}</td>; }); }); const overallAvg = subjectCount ? (grandTotal / subjectCount).toFixed(2) : 0; const grade = getGrade(overallAvg); row += <td class="p-2 border text-center font-semibold text-gray-800">${grandTotal.toFixed(2)}</td> <td class="p-2 border text-center text-gray-700">${overallAvg}</td> <td class="p-2 border text-center font-semibold ${grade === "A" ? "text-green-600" : grade === "B" ? "text-blue-600" : grade === "C" ? "text-yellow-600" : grade === "D" ? "text-orange-600" : "text-red-600"}">${grade}</td> </tr>; tbody.insertAdjacentHTML("beforeend", row); } // Summary section let summaryHtml = <h3 class="font-semibold text-lg mb-3 text-gray-700">Class Summary (${teacherClass}, ${term}, ${year})</h3>; summaryHtml += <div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-200 rounded-lg"> <thead class="bg-blue-50 text-gray-700 uppercase text-xs tracking-wide"> <tr><th class="border p-2 text-left">Subject</th><th class="border p-2">Highest</th><th class="border p-2">Lowest</th><th class="border p-2">Average</th></tr> </thead><tbody>; for (const [subject, arr] of Object.entries(subjectStats)) { const high = Math.max(...arr); const low = Math.min(...arr); const avg = (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(2); summaryHtml += <tr class="even:bg-gray-50 hover:bg-gray-100 transition"><td class="border p-2">${subject}</td><td class="border p-2 text-center">${high}</td><td class="border p-2 text-center">${low}</td><td class="border p-2 text-center">${avg}</td></tr>; } summaryHtml += "</tbody></table></div>"; summaryContainer.innerHTML = summaryHtml; tableContainer.classList.remove("hidden"); summaryContainer.classList.remove("hidden"); } </script> </body> </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Theory Broadsheet | Teacher Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-6">
+
+  <!-- Header -->
+  <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-lg shadow mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800">Bright Future Academy</h1>
+      <p class="text-gray-500">Theory Broadsheet Summary</p>
+    </div>
+    <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 transition text-white px-5 py-2 rounded mt-3 sm:mt-0">
+      Logout
+    </button>
+  </header>
+
+  <!-- Filters -->
+  <section class="bg-white p-5 rounded-lg shadow mb-6">
+    <h2 class="font-semibold text-lg text-gray-700 mb-4">Filter by Academic Year and Term</h2>
+    <div class="flex flex-wrap gap-4">
+      <select id="filterYear" class="border border-gray-300 focus:ring-2 focus:ring-blue-400 p-2 rounded-lg text-gray-700">
+        <option value="">Select Academic Year</option>
+        <option value="2025-2026">2025–2026</option>
+        <option value="2026-2027">2026–2027</option>
+        <option value="2027-2028">2027–2028</option>
+        <option value="2028-2029">2028–2029</option>
+        <option value="2029-2030">2029–2030</option>
+      </select>
+
+      <select id="filterTerm" class="border border-gray-300 focus:ring-2 focus:ring-blue-400 p-2 rounded-lg text-gray-700">
+        <option value="">Select Term</option>
+        <option>First Term</option>
+        <option>Second Term</option>
+        <option>Third Term</option>
+      </select>
+
+      <button id="generateBtn" class="bg-blue-600 hover:bg-blue-700 transition text-white px-5 py-2 rounded-lg">
+        Generate Broadsheet
+      </button>
+    </div>
+  </section>
+
+  <!-- Teacher Info -->
+  <section class="bg-white p-5 rounded-lg shadow mb-6">
+    <p class="text-gray-700">
+      <strong class="font-medium text-gray-800">Teacher Class:</strong>
+      <span id="teacherClassDisplay" class="text-blue-700 font-semibold"></span>
+    </p>
+  </section>
+
+  <!-- Broadsheet Table -->
+  <section id="tableContainer" class="overflow-x-auto bg-white p-5 rounded-lg shadow hidden">
+    <h3 class="text-lg font-semibold text-gray-700 mb-3 border-b pb-2">Student Broadsheet</h3>
+    <table class="min-w-full text-sm border-collapse border border-gray-200 rounded-lg overflow-hidden">
+      <thead id="thead" class="bg-blue-50 text-gray-700 text-xs uppercase tracking-wide"></thead>
+      <tbody id="tbody" class="text-gray-700"></tbody>
+    </table>
+  </section>
+
+  <!-- Summary Section -->
+  <section id="summaryContainer" class="mt-8 hidden bg-white p-5 rounded-lg shadow">
+    <h3 class="font-semibold text-lg text-gray-800 mb-4 border-b pb-2">Summary</h3>
+  </section>
+
+  <script>
+    // Firebase Setup
+    const firebaseConfig = {
+      apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+      authDomain: "school-6425b.firebaseapp.com",
+      databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+      projectId: "school-6425b",
+      storageBucket: "school-6425b.appspot.com",
+      messagingSenderId: "929265479935",
+      appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const subjects = [
+      "Science", "Home Economics", "Geography", "Agricultural Science", "Mathematics",
+      "Civic Education", "English Studies", "History", "Christian Religious Studies",
+      "Islam Religious Studies", "Information and Communication Technology",
+      "Personal Social and Health Education", "General Knowledge"
+    ];
+
+    const types = ["CA 1", "CA 2", "Examination", "Homework", "Project"];
+
+    const filterYear = document.getElementById("filterYear");
+    const filterTerm = document.getElementById("filterTerm");
+    const generateBtn = document.getElementById("generateBtn");
+    const tableContainer = document.getElementById("tableContainer");
+    const summaryContainer = document.getElementById("summaryContainer");
+    const thead = document.getElementById("thead");
+    const tbody = document.getElementById("tbody");
+    const teacherClassDisplay = document.getElementById("teacherClassDisplay");
+
+    let teacherClass = "";
+
+    // Logout
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      auth.signOut().then(() => window.location.href = "login.html");
+    });
+
+    // Auth Check
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) return (window.location.href = "login.html");
+
+      const snap = await db.ref(`users/${user.uid}`).once("value");
+      const teacher = snap.val();
+      if (!teacher || teacher.role !== "teacher") {
+        alert("Access denied.");
+        return (window.location.href = "dashboard.html");
+      }
+
+      teacherClass = teacher.class || "";
+      teacherClassDisplay.textContent = teacherClass || "Not Assigned";
+    });
+
+    generateBtn.addEventListener("click", async () => {
+      const year = filterYear.value;
+      const term = filterTerm.value;
+      if (!year || !term) return alert("Please select both year and term.");
+
+      await generateBroadsheet(year, term);
+    });
+
+    function getGrade(avg) {
+      if (avg >= 70) return "A";
+      if (avg >= 60) return "B";
+      if (avg >= 50) return "C";
+      if (avg >= 45) return "D";
+      if (avg >= 40) return "E";
+      return "F";
+    }
+
+    async function generateBroadsheet(year, term) {
+      tableContainer.classList.add("hidden");
+      summaryContainer.classList.add("hidden");
+
+      const snap = await db.ref("theorySubmissions").once("value");
+      const data = snap.val() || {};
+
+      const submissions = [];
+
+      Object.entries(data).forEach(([assId, studentSubs]) => {
+        Object.entries(studentSubs).forEach(([uid, sub]) => {
+          if (
+            sub.studentClass === teacherClass &&
+            sub.year === year &&
+            sub.term === term
+          ) {
+            submissions.push(sub);
+          }
+        });
+      });
+
+      if (!submissions.length) {
+        alert("No submissions found for this class and term.");
+        return;
+      }
+
+      // Header with grouped subjects + Total/Average/Grade
+      let header = `<tr>
+        <th rowspan="2" class="p-3 border bg-blue-100 text-left font-semibold">Student</th>`;
+      subjects.forEach(subject => {
+        header += `<th colspan="${types.length}" class="p-3 border bg-blue-100 text-center font-semibold">${subject}</th>`;
+      });
+      header += `<th rowspan="2" class="p-3 border bg-blue-100 text-center font-semibold">Total</th>
+                 <th rowspan="2" class="p-3 border bg-blue-100 text-center font-semibold">Average</th>
+                 <th rowspan="2" class="p-3 border bg-blue-100 text-center font-semibold">Grade</th>
+                 </tr><tr class="bg-blue-50">`;
+      subjects.forEach(() => {
+        types.forEach(type => {
+          header += `<th class="p-2 border text-center text-[11px] font-medium">${type}</th>`;
+        });
+      });
+      header += "</tr>";
+      thead.innerHTML = header;
+
+      // Group by student
+      const grouped = {};
+      submissions.forEach(s => {
+        if (!grouped[s.studentName]) grouped[s.studentName] = {};
+        if (!grouped[s.studentName][s.subject]) grouped[s.studentName][s.subject] = {};
+        grouped[s.studentName][s.subject][s.type] = s.totalScore || 0;
+      });
+
+      tbody.innerHTML = "";
+      const subjectStats = {};
+
+      for (const student in grouped) {
+        let row = `<tr class="even:bg-gray-50 hover:bg-gray-100 transition"><td class="p-3 border font-semibold text-gray-800">${student}</td>`;
+        let grandTotal = 0;
+        let subjectCount = 0;
+
+        subjects.forEach(subject => {
+          const scores = grouped[student][subject] || {};
+          const validScores = Object.values(scores).filter(s => typeof s === "number");
+          const avg = validScores.length ? (validScores.reduce((a,b)=>a+b,0)/validScores.length) : 0;
+
+          if (avg > 0) {
+            grandTotal += avg;
+            subjectCount++;
+          }
+
+          if (!subjectStats[subject]) subjectStats[subject] = [];
+          if (avg) subjectStats[subject].push(avg);
+
+          types.forEach(t => {
+            row += `<td class="p-2 border text-center text-gray-700">${scores[t] ?? "-"}</td>`;
+          });
+        });
+
+        const overallAvg = subjectCount ? (grandTotal / subjectCount).toFixed(2) : 0;
+        const grade = getGrade(overallAvg);
+
+        row += `
+          <td class="p-2 border text-center font-semibold text-gray-800">${grandTotal.toFixed(2)}</td>
+          <td class="p-2 border text-center text-gray-700">${overallAvg}</td>
+          <td class="p-2 border text-center font-semibold ${grade === "A" ? "text-green-600" : grade === "B" ? "text-blue-600" : grade === "C" ? "text-yellow-600" : grade === "D" ? "text-orange-600" : "text-red-600"}">${grade}</td>
+        </tr>`;
+
+        tbody.insertAdjacentHTML("beforeend", row);
+      }
+
+      // Summary section
+      let summaryHtml = `<h3 class="font-semibold text-lg mb-3 text-gray-700">Class Summary (${teacherClass}, ${term}, ${year})</h3>`;
+      summaryHtml += `<div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-200 rounded-lg">
+        <thead class="bg-blue-50 text-gray-700 uppercase text-xs tracking-wide">
+          <tr><th class="border p-2 text-left">Subject</th><th class="border p-2">Highest</th><th class="border p-2">Lowest</th><th class="border p-2">Average</th></tr>
+        </thead><tbody>`;
+      for (const [subject, arr] of Object.entries(subjectStats)) {
+        const high = Math.max(...arr);
+        const low = Math.min(...arr);
+        const avg = (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(2);
+        summaryHtml += `<tr class="even:bg-gray-50 hover:bg-gray-100 transition"><td class="border p-2">${subject}</td><td class="border p-2 text-center">${high}</td><td class="border p-2 text-center">${low}</td><td class="border p-2 text-center">${avg}</td></tr>`;
+      }
+      summaryHtml += "</tbody></table></div>";
+
+      summaryContainer.innerHTML = summaryHtml;
+      tableContainer.classList.remove("hidden");
+      summaryContainer.classList.remove("hidden");
+    }
+  </script>
+</body>
+</html>
