@@ -1,225 +1,237 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Teacher - Theory Assessments | ORLI International Academy</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teacher Theory Assessment | ORLI International Academy</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js" type="module"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js" type="module"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js" type="module"></script>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100 text-gray-800">
 
-  <header class="bg-blue-900 text-white text-center py-6 shadow">
-    <h1 class="text-3xl font-bold">ORLI International Academy</h1>
-    <p class="text-lg">Teacher - Manage Theory Assessments</p>
-  </header>
+  <div id="unauthorized" class="hidden h-screen flex items-center justify-center">
+    <h2 class="text-2xl font-bold text-red-600">Access restricted to teachers only.</h2>
+  </div>
 
-  <div class="max-w-5xl mx-auto py-8 px-4">
-    <!-- Create Assessment Form -->
-    <div class="bg-white shadow rounded-lg p-6 mb-6">
-      <h2 class="text-xl font-semibold mb-4">Create New Theory Assessment</h2>
-      <form id="createForm" class="space-y-4">
-        <input type="text" id="schoolName" readonly value="ORLI International Academy"
-          class="w-full p-2 border rounded bg-gray-100"/>
+  <div id="mainContent" class="hidden max-w-5xl mx-auto py-10 px-4">
+    <h1 class="text-3xl font-bold mb-6 text-center text-blue-700">Theory Assessment Management</h1>
 
-        <input type="text" id="teacherClass" readonly
-          placeholder="Fetching your class..." class="w-full p-2 border rounded bg-gray-100"/>
-
-        <input type="text" id="academicYear" placeholder="Academic Year (e.g. 2024/2025)"
-          required class="w-full p-2 border rounded"/>
-
-        <select id="term" required class="w-full p-2 border rounded">
-          <option value="">Select Term</option>
-          <option>First Term</option>
-          <option>Second Term</option>
-          <option>Third Term</option>
-        </select>
-
-        <input type="text" id="subject" placeholder="Subject" required
-          class="w-full p-2 border rounded"/>
-
-        <select id="assessmentName" required class="w-full p-2 border rounded">
-          <option value="">Select Assessment Type</option>
-          <option>CA1</option>
-          <option>CA2</option>
-          <option>Homework</option>
-          <option>Examination</option>
-        </select>
-
-        <!-- Questions -->
-        <div id="questions" class="space-y-2">
-          <div class="flex space-x-2">
-            <input type="text" placeholder="Question text" class="flex-1 p-2 border rounded questionText"/>
-            <input type="number" placeholder="Score" class="w-24 p-2 border rounded questionScore"/>
+    <div class="bg-white p-6 rounded-xl shadow mb-8">
+      <form id="assessmentForm" class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block font-semibold">School Name</label>
+            <input type="text" id="schoolName" class="w-full border rounded p-2" readonly value="ORLI International Academy">
+          </div>
+          <div>
+            <label class="block font-semibold">Teacher's Class</label>
+            <input type="text" id="teacherClass" class="w-full border rounded p-2 bg-gray-100" readonly>
+          </div>
+          <div>
+            <label class="block font-semibold">Academic Year</label>
+            <select id="academicYear" class="w-full border rounded p-2"></select>
+          </div>
+          <div>
+            <label class="block font-semibold">Term</label>
+            <select id="term" class="w-full border rounded p-2"></select>
+          </div>
+          <div>
+            <label class="block font-semibold">Subject</label>
+            <select id="subject" class="w-full border rounded p-2"></select>
+          </div>
+          <div>
+            <label class="block font-semibold">Assessment Type</label>
+            <select id="assessmentType" class="w-full border rounded p-2">
+              <option value="Test">Test</option>
+              <option value="Exam">Exam</option>
+              <option value="Assignment">Assignment</option>
+            </select>
           </div>
         </div>
 
-        <button type="button" id="addQuestion"
-          class="bg-blue-500 text-white px-3 py-1 rounded">+ Add Question</button>
+        <div class="mt-4">
+          <label class="block font-semibold mb-2">Theory Questions</label>
+          <div id="questionsContainer" class="space-y-2"></div>
+          <button type="button" id="addQuestion" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Add Question</button>
+        </div>
 
-        <button type="submit"
-          class="bg-green-600 text-white px-4 py-2 rounded mt-3">Save Assessment</button>
+        <div class="mt-4 font-semibold">
+          Total Score: <span id="totalScore" class="text-blue-700">0</span>
+        </div>
+
+        <button type="submit" class="mt-4 w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded font-bold">Save Assessment</button>
       </form>
     </div>
 
-    <!-- List of Assessments -->
-    <div class="bg-white shadow rounded-lg p-6">
-      <h2 class="text-xl font-semibold mb-4">All Theory Assessments</h2>
-      <div id="assessmentsList" class="space-y-4 text-sm text-gray-700">
-        <p>Loading assessments...</p>
-      </div>
+    <div class="bg-white p-6 rounded-xl shadow">
+      <h2 class="text-2xl font-bold mb-4 text-gray-700">My Assessments</h2>
+      <div id="assessmentsList" class="overflow-x-auto"></div>
     </div>
   </div>
 
-  <!-- Firebase Logic -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import {
-      getFirestore, collection, addDoc, onSnapshot, updateDoc,
-      deleteDoc, doc, query, where, getDoc
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+      apiKey: "AIzaSyB_T2_-Hbn5XrMB2Oce8r9ERkkSmfODdfU",
       authDomain: "school-6425b.firebaseapp.com",
       projectId: "school-6425b",
       storageBucket: "school-6425b.appspot.com",
-      messagingSenderId: "929265479935",
-      appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+      messagingSenderId: "927795211463",
+      appId: "1:927795211463:web:de170df08b23f70318b69f"
     };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const form = document.getElementById("createForm");
-    const questionsDiv = document.getElementById("questions");
-    const addQuestionBtn = document.getElementById("addQuestion");
-    const assessmentsList = document.getElementById("assessmentsList");
+    const mainContent = document.getElementById("mainContent");
+    const unauthorized = document.getElementById("unauthorized");
     const teacherClassInput = document.getElementById("teacherClass");
+    const form = document.getElementById("assessmentForm");
+    const questionsContainer = document.getElementById("questionsContainer");
+    const totalScoreDisplay = document.getElementById("totalScore");
+    const assessmentsList = document.getElementById("assessmentsList");
 
-    let teacherClass = "";
+    let teacherUID = null;
+    let teacherClass = null;
+    let totalScore = 0;
 
-    // Authenticate teacher and fetch class
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) return (window.location.href = "login.html");
-      const userRef = doc(db, "users", user.uid);
-      const userSnap = await getDoc(userRef);
-      if (!userSnap.exists() || userSnap.data().role !== "teacher") {
-        alert("Access denied. Teachers only.");
-        return (window.location.href = "dashboard.html");
-      }
-      teacherClass = userSnap.data().class;
-      teacherClassInput.value = teacherClass;
+    const calcTotal = () => {
+      const scores = [...document.querySelectorAll(".scoreInput")].map(i => parseFloat(i.value) || 0);
+      totalScore = scores.reduce((a, b) => a + b, 0);
+      totalScoreDisplay.textContent = totalScore;
+    };
 
-      loadAssessments();
-    });
-
-    // ➕ Add question field
-    addQuestionBtn.addEventListener("click", () => {
+    document.getElementById("addQuestion").addEventListener("click", () => {
       const div = document.createElement("div");
-      div.className = "flex space-x-2";
+      div.className = "flex items-center gap-2";
       div.innerHTML = `
-        <input type="text" placeholder="Question text" class="flex-1 p-2 border rounded questionText"/>
-        <input type="number" placeholder="Score" class="w-24 p-2 border rounded questionScore"/>
-      `;
-      questionsDiv.appendChild(div);
+        <input type="text" placeholder="Question" class="flex-1 border rounded p-2 questionInput" required>
+        <input type="number" placeholder="Score" min="1" class="w-24 border rounded p-2 scoreInput" required>
+        <button type="button" class="text-red-600 font-bold removeBtn">✖</button>`;
+      questionsContainer.appendChild(div);
+
+      div.querySelector(".scoreInput").addEventListener("input", calcTotal);
+      div.querySelector(".removeBtn").addEventListener("click", () => {
+        div.remove();
+        calcTotal();
+      });
     });
 
-    // 📝 Save assessment
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
+    async function loadDropdowns() {
+      const yearSel = document.getElementById("academicYear");
+      const termSel = document.getElementById("term");
+      const subjSel = document.getElementById("subject");
 
-      const schoolName = document.getElementById("schoolName").value;
-      const academicYear = document.getElementById("academicYear").value;
-      const term = document.getElementById("term").value;
-      const subject = document.getElementById("subject").value;
-      const assessmentName = document.getElementById("assessmentName").value;
+      for (const [col, sel] of [
+        ["years", yearSel],
+        ["terms", termSel],
+        ["subjects", subjSel]
+      ]) {
+        const snap = await getDocs(collection(db, col));
+        snap.forEach(doc => {
+          const opt = document.createElement("option");
+          opt.value = doc.data().name || doc.id;
+          opt.textContent = doc.data().name || doc.id;
+          sel.appendChild(opt);
+        });
+      }
+    }
 
-      let questions = [];
-      let totalScore = 0;
-      document.querySelectorAll(".questionText").forEach((q, i) => {
-        const text = q.value;
-        const score = parseInt(document.querySelectorAll(".questionScore")[i].value) || 0;
-        if (text) {
-          questions.push({ text, score });
-          totalScore += score;
-        }
+    async function loadAssessments() {
+      const q = query(collection(db, "theoryAssessments"), where("teacherUID", "==", teacherUID));
+      const snap = await getDocs(q);
+      let html = `
+        <table class="min-w-full border text-sm">
+          <thead class="bg-gray-200">
+            <tr><th class="p-2">Subject</th><th>Type</th><th>Term</th><th>Year</th><th>Total</th><th>Status</th><th>Action</th></tr>
+          </thead><tbody>`;
+      snap.forEach(docSnap => {
+        const a = docSnap.data();
+        html += `
+          <tr class="border-t">
+            <td class="p-2">${a.subject}</td>
+            <td>${a.assessmentType}</td>
+            <td>${a.term}</td>
+            <td>${a.academicYear}</td>
+            <td>${a.totalScore}</td>
+            <td>${a.published ? '<span class="text-green-600 font-semibold">Published</span>' : '<span class="text-gray-500">Draft</span>'}</td>
+            <td>
+              <button class="bg-blue-500 text-white px-2 py-1 rounded publishBtn" data-id="${docSnap.id}">${a.published ? 'Unpublish' : 'Publish'}</button>
+              <button class="bg-red-500 text-white px-2 py-1 rounded deleteBtn" data-id="${docSnap.id}">Delete</button>
+            </td>
+          </tr>`;
       });
+      html += "</tbody></table>";
+      assessmentsList.innerHTML = html;
 
-      await addDoc(collection(db, "theoryAssessments"), {
-        schoolName, academicYear, term, class: teacherClass,
-        subject, assessmentName, questions, totalScore,
-        published: false, createdAt: Date.now()
+      document.querySelectorAll(".publishBtn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const ref = doc(db, "theoryAssessments", btn.dataset.id);
+          const published = btn.textContent === "Unpublish" ? false : true;
+          await updateDoc(ref, { published });
+          loadAssessments();
+        });
       });
-
-      form.reset();
-      questionsDiv.innerHTML = `
-        <div class="flex space-x-2">
-          <input type="text" placeholder="Question text" class="flex-1 p-2 border rounded questionText"/>
-          <input type="number" placeholder="Score" class="w-24 p-2 border rounded questionScore"/>
-        </div>`;
-    });
-
-    // 🔄 Load assessments
-    function loadAssessments() {
-      const colRef = query(collection(db, "theoryAssessments"), where("class", "==", teacherClass));
-
-      onSnapshot(colRef, (snapshot) => {
-        assessmentsList.innerHTML = "";
-        if (snapshot.empty) {
-          assessmentsList.innerHTML = `<p class="text-gray-500">No assessments yet.</p>`;
-          return;
-        }
-
-        snapshot.forEach((docSnap) => {
-          const data = docSnap.data();
-          const div = document.createElement("div");
-          div.className = "p-4 border rounded bg-gray-50";
-          div.innerHTML = `
-            <h3 class="font-bold text-lg">${data.assessmentName} - ${data.subject} (${data.term})</h3>
-            <p><strong>Class:</strong> ${data.class}</p>
-            <p><strong>Year:</strong> ${data.academicYear}</p>
-            <p><strong>Total Score:</strong> ${data.totalScore}</p>
-            <p>Status: <span class="font-semibold ${data.published ? 'text-green-600':'text-red-600'}">
-              ${data.published ? 'Published':'Draft'}</span></p>
-            <div class="mt-2 space-x-2">
-              <button class="bg-blue-500 text-white px-2 py-1 rounded" onclick="togglePublish('${docSnap.id}', ${data.published})">
-                ${data.published ? 'Unpublish':'Publish'}
-              </button>
-              <button class="bg-yellow-500 text-white px-2 py-1 rounded" onclick="editAssessment('${docSnap.id}')">Edit</button>
-              <button class="bg-red-600 text-white px-2 py-1 rounded" onclick="deleteAssessment('${docSnap.id}')">Delete</button>
-            </div>
-          `;
-          assessmentsList.appendChild(div);
+      document.querySelectorAll(".deleteBtn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          await deleteDoc(doc(db, "theoryAssessments", btn.dataset.id));
+          loadAssessments();
         });
       });
     }
 
-    // ✅ Toggle publish/unpublish
-    window.togglePublish = async (id, current) => {
-      const ref = doc(db, "theoryAssessments", id);
-      await updateDoc(ref, { published: !current });
-    };
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const questions = [...document.querySelectorAll(".questionInput")].map((el, i) => ({
+        question: el.value,
+        score: parseFloat(document.querySelectorAll(".scoreInput")[i].value)
+      }));
 
-    // ✏️ Edit placeholder
-    window.editAssessment = (id) => {
-      alert("Edit function can be added later (repopulate form). For now, delete & re-add.");
-    };
+      await addDoc(collection(db, "theoryAssessments"), {
+        schoolName: "ORLI International Academy",
+        teacherUID,
+        teacherClass,
+        academicYear: academicYear.value,
+        term: term.value,
+        subject: subject.value,
+        assessmentType: assessmentType.value,
+        questions,
+        totalScore,
+        published: false,
+        createdAt: new Date()
+      });
+      alert("Assessment saved successfully!");
+      form.reset();
+      questionsContainer.innerHTML = "";
+      totalScoreDisplay.textContent = "0";
+      loadAssessments();
+    });
 
-    // ❌ Delete assessment
-    window.deleteAssessment = async (id) => {
-      if (confirm("Are you sure you want to delete this assessment?")) {
-        await deleteDoc(doc(db, "theoryAssessments", id));
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
       }
-    };
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (!userDoc.exists() || userDoc.data().role !== "Teacher") {
+        unauthorized.classList.remove("hidden");
+        return;
+      }
+
+      teacherUID = user.uid;
+      teacherClass = userDoc.data().class || "Not assigned";
+      teacherClassInput.value = teacherClass;
+      mainContent.classList.remove("hidden");
+
+      await loadDropdowns();
+      await loadAssessments();
+    });
   </script>
 </body>
 </html>
-```
