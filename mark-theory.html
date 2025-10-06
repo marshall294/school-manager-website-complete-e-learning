@@ -1,43 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Teacher - Grade Submissions</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teacher – Grade Submissions</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen p-6">
-
-  <!-- 🔹 Header -->
+  <!-- Header -->
   <div class="flex items-center justify-between mb-6">
     <div class="flex items-center space-x-4">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/4/4a/Logo_2013_Google.png" alt="School Logo" class="h-14">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/4/4a/Logo_2013_Google.png" class="h-14" alt="Logo">
       <div>
         <h1 class="text-2xl font-bold">Bright Future Academy</h1>
-        <p class="text-gray-600">Theory Assessment Marking</p>
+        <p class="text-gray-600">Teacher Grading Dashboard</p>
       </div>
     </div>
-    <p class="text-gray-500 text-sm">Academic Year: 2025</p>
+    <div>
+      <button id="logoutBtn" class="bg-red-600 text-white px-4 py-2 rounded">Logout</button>
+    </div>
   </div>
 
-  <!-- 🔹 Filters -->
+  <!-- Filters -->
   <div class="flex space-x-4 mb-4">
-    <select id="filterTerm" class="border p-2 rounded">
-      <option value="">All Terms</option>
-    </select>
-    <select id="filterSubject" class="border p-2 rounded">
-      <option value="">All Subjects</option>
-    </select>
-    <select id="filterAssessment" class="border p-2 rounded">
-      <option value="">All Assessments</option>
-    </select>
+    <select id="filterTerm" class="border p-2 rounded"><option value="">All Terms</option></select>
+    <select id="filterSubject" class="border p-2 rounded"><option value="">All Subjects</option></select>
+    <select id="filterAssessment" class="border p-2 rounded"><option value="">All Assessments</option></select>
   </div>
 
-  <!-- 🔹 Submissions Table -->
-  <div class="bg-white rounded shadow overflow-x-auto">
+  <!-- Table -->
+  <div class="bg-white rounded shadow">
     <table class="min-w-full border-collapse">
       <thead>
         <tr class="bg-gray-200 text-left">
@@ -55,10 +50,9 @@
     </table>
   </div>
 
-  <!-- 🔹 Average Display -->
   <div id="avgDisplay" class="mt-4"></div>
 
-  <!-- 🔹 Grading Modal -->
+  <!-- Modal -->
   <div id="gradingModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
     <div class="bg-white p-6 rounded shadow-lg w-2/3 max-h-[90vh] overflow-y-auto">
       <h2 class="text-xl font-bold mb-4">Grade Submission</h2>
@@ -71,7 +65,7 @@
   </div>
 
   <script>
-    // --- Firebase setup ---
+    // ✅ Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
       authDomain: "school-6425b.firebaseapp.com",
@@ -81,144 +75,184 @@
       messagingSenderId: "929265479935",
       appId: "1:929265479935:web:af45ea5968ee50258a1cca"
     };
-
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
 
-    // DOM elements
+    // DOM Refs
     const submissionsTable = document.getElementById("submissionsTable");
-    const filterTerm = document.getElementById("filterTerm");
-    const filterSubject = document.getElementById("filterSubject");
-    const filterAssessment = document.getElementById("filterAssessment");
     const gradingModal = document.getElementById("gradingModal");
     const gradingContent = document.getElementById("gradingContent");
     const closeModalBtn = document.getElementById("closeModal");
     const saveScoresBtn = document.getElementById("saveScores");
+    const filterTerm = document.getElementById("filterTerm");
+    const filterSubject = document.getElementById("filterSubject");
+    const filterAssessment = document.getElementById("filterAssessment");
     const avgDisplay = document.getElementById("avgDisplay");
 
     let teacherClass = "";
     let allSubmissions = [];
-    let currentDocId = "";
-    let currentAnswers = [];
+    let currentSubmission = null;
 
-    // --- Auth check ---
-    auth.onAuthStateChanged(user => {
-      if (!user) return location.href = 'login.html';
-      db.ref(`users/${user.uid}`).once('value').then(snap => {
-        const data = snap.val() || {};
-        if (data.role !== 'teacher') return alert('Access denied');
-        teacherClass = data.class;
-        loadSubmissions();
-      });
+    // Logout
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      auth.signOut().then(() => (window.location.href = "login.html"));
     });
 
-    // --- Load Submissions ---
-    function loadSubmissions() {
-      db.ref("theorySubmissions").on("value", snap => {
-        allSubmissions = [];
-        snap.forEach(child => {
-          const val = child.val();
-          if (val.class === teacherClass) {
-            allSubmissions.push({ id: child.key, ...val });
+    // Auth
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) return (window.location.href = "login.html");
+
+      const snap = await db.ref(`users/${user.uid}`).once("value");
+      const teacher = snap.val();
+      if (!teacher || teacher.role !== "teacher") {
+        alert("Access denied.");
+        return (window.location.href = "dashboard.html");
+      }
+
+      teacherClass = teacher.class || "";
+      loadSubmissions();
+    });
+
+    // 🔹 Load Submissions for Teacher’s Class
+    async function loadSubmissions() {
+      submissionsTable.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-500">Loading...</td></tr>`;
+      const theorySnap = await db.ref("theorySubmissions").once("value");
+      const data = theorySnap.val() || {};
+
+      allSubmissions = [];
+
+      // Flatten nested submissions
+      Object.entries(data).forEach(([assessmentId, studentSubs]) => {
+        Object.entries(studentSubs).forEach(([uid, sub]) => {
+          if (sub.studentClass === teacherClass) {
+            allSubmissions.push({ ...sub, assessmentId });
           }
         });
-        populateFilters();
-        renderTable();
       });
+
+      if (!allSubmissions.length) {
+        submissionsTable.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-500">No submissions found for your class.</td></tr>`;
+        return;
+      }
+
+      populateFilters();
+      renderSubmissions();
     }
 
-    // --- Populate Filters ---
+    // 🔹 Populate Filters
     function populateFilters() {
-      const terms = [...new Set(allSubmissions.map(s => s.term))];
-      const subjects = [...new Set(allSubmissions.map(s => s.subject))];
-      const assessments = [...new Set(allSubmissions.map(s => s.assessmentName))];
+      const terms = [...new Set(allSubmissions.map((s) => s.term))];
+      const subjects = [...new Set(allSubmissions.map((s) => s.subject))];
+      const assessments = [...new Set(allSubmissions.map((s) => s.assessmentName))];
 
-      fillSelect(filterTerm, terms);
-      fillSelect(filterSubject, subjects);
-      fillSelect(filterAssessment, assessments);
+      fillDropdown(filterTerm, terms);
+      fillDropdown(filterSubject, subjects);
+      fillDropdown(filterAssessment, assessments);
     }
 
-    function fillSelect(select, items) {
-      const current = select.value;
-      select.innerHTML = `<option value="">All</option>` + items.map(v => `<option ${v === current ? 'selected' : ''}>${v}</option>`).join("");
+    function fillDropdown(select, items) {
+      select.innerHTML = `<option value="">All</option>` + 
+        items.map(v => `<option value="${v}">${v}</option>`).join("");
     }
 
-    // --- Render Table ---
-    function renderTable() {
-      submissionsTable.innerHTML = "";
-      const filtered = allSubmissions.filter(s =>
-        (!filterTerm.value || s.term === filterTerm.value) &&
-        (!filterSubject.value || s.subject === filterSubject.value) &&
-        (!filterAssessment.value || s.assessmentName === filterAssessment.value)
+    // 🔹 Render Table
+    function renderSubmissions() {
+      const term = filterTerm.value;
+      const subject = filterSubject.value;
+      const assess = filterAssessment.value;
+
+      const filtered = allSubmissions.filter(s => 
+        (!term || s.term === term) &&
+        (!subject || s.subject === subject) &&
+        (!assess || s.assessmentName === assess)
       );
 
+      submissionsTable.innerHTML = "";
+
       if (!filtered.length) {
-        submissionsTable.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-500">No submissions found</td></tr>`;
+        submissionsTable.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-500">No matching submissions.</td></tr>`;
         avgDisplay.innerHTML = "";
         return;
       }
 
-      let total = 0, graded = 0;
+      let total = 0, gradedCount = 0;
       filtered.forEach(sub => {
-        if (sub.graded) { total += sub.totalScore || 0; graded++; }
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td class="p-3 border font-medium">${sub.studentName}</td>
-          <td class="p-3 border">${sub.class}</td>
+        if (sub.graded) { total += sub.totalScore || 0; gradedCount++; }
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="p-3 border">${sub.studentName}</td>
+          <td class="p-3 border">${sub.studentClass}</td>
           <td class="p-3 border">${sub.subject}</td>
           <td class="p-3 border">${sub.term}</td>
           <td class="p-3 border">${sub.assessmentName}</td>
-          <td class="p-3 border ${sub.graded ? 'text-green-600' : 'text-red-600'}">${sub.graded ? '✅ Graded' : '📝 Pending'}</td>
-          <td class="p-3 border font-semibold">${sub.totalScore ?? '-'}</td>
-          <td class="p-3 border"><button class="bg-indigo-600 text-white px-3 py-1 rounded" onclick="grade('${sub.id}')">Mark</button></td>
-        `;
-        submissionsTable.appendChild(row);
+          <td class="p-3 border ${sub.graded ? 'text-green-600' : 'text-red-600'}">${sub.graded ? 'Graded' : 'Pending'}</td>
+          <td class="p-3 border">${sub.totalScore ?? '-'}</td>
+          <td class="p-3 border">
+            <button class="bg-indigo-600 text-white px-3 py-1 rounded gradeBtn" data-id="${sub.assessmentId}" data-uid="${sub.studentUid}">Grade</button>
+          </td>`;
+        submissionsTable.appendChild(tr);
       });
 
-      const avg = graded ? (total / graded).toFixed(2) : '-';
-      avgDisplay.innerHTML = `<p class="bg-gray-100 p-2 rounded mt-2">Average Score: <b>${avg}</b></p>`;
+      const avg = gradedCount ? (total / gradedCount).toFixed(2) : "-";
+      avgDisplay.innerHTML = `<div class="bg-gray-100 p-3 rounded text-gray-700">Average Score: <span class="font-bold text-indigo-700">${avg}</span></div>`;
+
+      attachGradeEvents();
     }
 
-    // --- Grade Submission ---
-    window.grade = id => {
-      const sub = allSubmissions.find(s => s.id === id);
-      if (!sub) return;
-      currentDocId = id;
-      currentAnswers = sub.answers || [];
-      gradingContent.innerHTML = currentAnswers.map((a, i) => `
-        <div class="mb-3">
-          <p class="font-semibold">Q${i+1}: ${a.question}</p>
-          <p class="ml-2 text-gray-700">Ans: ${a.answer}</p>
-          <input type="number" min="0" max="${a.expectedScore}" value="${a.score ?? ''}" data-idx="${i}" class="scoreInput border rounded px-2 py-1 w-24 mt-1">
+    // 🔹 Grade Button
+    function attachGradeEvents() {
+      document.querySelectorAll(".gradeBtn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.dataset.id;
+          const uid = btn.dataset.uid;
+          const snap = await db.ref(`theorySubmissions/${id}/${uid}`).once("value");
+          if (!snap.exists()) return;
+          currentSubmission = { path: `theorySubmissions/${id}/${uid}`, ...snap.val() };
+          openGradingModal(currentSubmission);
+        });
+      });
+    }
+
+    // 🔹 Modal
+    function openGradingModal(sub) {
+      gradingContent.innerHTML = sub.answers.map((a, i) => `
+        <div class="mb-4">
+          <p class="font-semibold">Q${i + 1}: ${a.question}</p>
+          <p class="ml-2 text-gray-700">Answer: ${a.answer}</p>
+          <input type="number" min="0" max="${a.expectedScore}" value="${a.score ?? ''}"
+            class="scoreInput border rounded px-2 py-1 mt-1 w-24" data-idx="${i}" placeholder="Score / ${a.expectedScore}">
           <span class="ml-2 text-sm text-gray-500">Max: ${a.expectedScore}</span>
         </div>
-      `).join('');
+      `).join("");
       gradingModal.classList.remove("hidden");
-    };
+    }
 
-    // --- Save Scores ---
-    saveScoresBtn.addEventListener("click", () => {
+    // 🔹 Save Scores
+    saveScoresBtn.addEventListener("click", async () => {
       const inputs = gradingContent.querySelectorAll(".scoreInput");
       let total = 0;
-      inputs.forEach(inp => {
-        const idx = +inp.dataset.idx;
-        const score = Number(inp.value) || 0;
-        currentAnswers[idx].score = score;
+      const updated = currentSubmission.answers.map((a, i) => {
+        const input = inputs[i];
+        const score = Number(input.value) || 0;
+        if (score > a.expectedScore) return alert(`Q${i + 1}: max ${a.expectedScore}`);
         total += score;
+        return { ...a, score };
       });
-      db.ref(`theorySubmissions/${currentDocId}`).update({
-        graded: true,
+
+      await db.ref(currentSubmission.path).update({
+        answers: updated,
         totalScore: total,
-        answers: currentAnswers
+        graded: true
       });
       gradingModal.classList.add("hidden");
+      loadSubmissions();
     });
 
     closeModalBtn.addEventListener("click", () => gradingModal.classList.add("hidden"));
 
-    // --- Filter Events ---
-    [filterTerm, filterSubject, filterAssessment].forEach(f => f.addEventListener("change", renderTable));
+    // Filters
+    [filterTerm, filterSubject, filterAssessment].forEach(sel => sel.addEventListener("change", renderSubmissions));
   </script>
 </body>
 </html>
