@@ -1,296 +1,225 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Upload Google Doc Assessment</title>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <style>
-    body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 1rem; background: #f0f8ff; }
-    .container { max-width: 900px; margin: auto; padding: 1rem; background: white; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    h2 { text-align: center; color: #003366; margin-bottom: 1rem; }
-    select, input, button {
-      width: 100%; padding: 10px; margin: 10px 0; border-radius: 6px; border: 1px solid #ccc; font-size: 1rem;
-    }
-    button { background-color: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
-    button:hover { background-color: #0056b3; }
-    iframe {
-      width: 100%; height: 350px; border: 1px solid #ccc; border-radius: 8px; margin-top: 1rem;
-    }
-    .box { margin-top: 2rem; }
-    .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 1rem; }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Teacher - Theory Assessments | ORLI International Academy</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js" type="module"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js" type="module"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js" type="module"></script>
 </head>
-<body>
-  <div class="container">
-    <h2>Upload Google Doc Assessment</h2>
-    <select id="cbtYear">
-      <option value="">Select Academic Year</option>
-      <option>2025-2026</option>
-      <option>2026-2027</option>
-      <option>2027-2028</option>
-      <option>2028-2029</option>
-      <option>2029-2030</option>
-    </select>
-    <select id="cbtTerm">
-      <option value="">Select Term</option>
-      <option>First Term</option>
-      <option>Second Term</option>
-      <option>Third Term</option>
-    </select>
-    <select id="cbtSubject">
-      <option value="">Select Subject</option>
-      <option>Mathematics</option>
-      <option>English Studies</option>
-      <option>Science</option>
-      <option>Home Economics</option>
-      <option>Geography</option>
-      <option>Agricultural Science</option>
-      <option>Civic Education</option>
-      <option>History</option>
-      <option>Christian Religious Studies</option>
-      <option>Islam Religious Studies</option>
-      <option>Information and Communication Technology</option>
-      <option>Personal Social and Health Education</option>
-      <option>General Knowledge</option>
-    </select>
-    <select id="cbtType">
-      <option value="">Select Assessment Type</option>
-      <option>CA 1</option>
-      <option>CA 2</option>
-      <option>Assignment</option>
-      <option>Project</option>
-      <option>Examination</option>
-    </select>
-    <input id="docLink" type="url" placeholder="Paste Google Doc link here..."/>
-    <button onclick="uploadAssessment()">Upload Assessment</button>
+<body class="bg-gray-100 min-h-screen">
 
-    <div class="filters">
-      <select id="filterYear" onchange="loadAssessments()">
-        <option value="">Filter by Year</option>
-        <option>2025-2026</option>
-        <option>2026-2027</option>
-        <option>2027-2028</option>
-        <option>2028-2029</option>
-        <option>2029-2030</option>
-      </select>
-      <select id="filterTerm" onchange="loadAssessments()">
-        <option value="">Filter by Term</option>
-        <option>First</option>
-        <option>Second</option>
-        <option>Third</option>
-      </select>
-      <select id="filterSubject" onchange="loadAssessments()">
-        <option value="">Filter by Subject</option>
-        <option>Mathematics</option>
-        <option>English Studies</option>
-        <option>Science</option>
-        <option>Home Economics</option>
-        <option>Geography</option>
-        <option>Agricultural Science</option>
-        <option>Civic Education</option>
-        <option>History</option>
-        <option>Christian Religious Studies</option>
-        <option>Islam Religious Studies</option>
-        <option>Information and Communication Technology</option>
-        <option>Personal Social and Health Education</option>
-        <option>General Knowledge</option>
-      </select>
-      <select id="filterType" onchange="loadAssessments()">
-        <option value="">Filter by Type</option>
-        <option>CA 1</option>
-        <option>CA 2</option>
-        <option>Assignment</option>
-        <option>Project</option>
-        <option>Examination</option>
-      </select>
+  <header class="bg-blue-900 text-white text-center py-6 shadow">
+    <h1 class="text-3xl font-bold">ORLI International Academy</h1>
+    <p class="text-lg">Teacher - Manage Theory Assessments</p>
+  </header>
+
+  <div class="max-w-5xl mx-auto py-8 px-4">
+    <!-- Create Assessment Form -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Create New Theory Assessment</h2>
+      <form id="createForm" class="space-y-4">
+        <input type="text" id="schoolName" readonly value="ORLI International Academy"
+          class="w-full p-2 border rounded bg-gray-100"/>
+
+        <input type="text" id="teacherClass" readonly
+          placeholder="Fetching your class..." class="w-full p-2 border rounded bg-gray-100"/>
+
+        <input type="text" id="academicYear" placeholder="Academic Year (e.g. 2024/2025)"
+          required class="w-full p-2 border rounded"/>
+
+        <select id="term" required class="w-full p-2 border rounded">
+          <option value="">Select Term</option>
+          <option>First Term</option>
+          <option>Second Term</option>
+          <option>Third Term</option>
+        </select>
+
+        <input type="text" id="subject" placeholder="Subject" required
+          class="w-full p-2 border rounded"/>
+
+        <select id="assessmentName" required class="w-full p-2 border rounded">
+          <option value="">Select Assessment Type</option>
+          <option>CA1</option>
+          <option>CA2</option>
+          <option>Homework</option>
+          <option>Examination</option>
+        </select>
+
+        <!-- Questions -->
+        <div id="questions" class="space-y-2">
+          <div class="flex space-x-2">
+            <input type="text" placeholder="Question text" class="flex-1 p-2 border rounded questionText"/>
+            <input type="number" placeholder="Score" class="w-24 p-2 border rounded questionScore"/>
+          </div>
+        </div>
+
+        <button type="button" id="addQuestion"
+          class="bg-blue-500 text-white px-3 py-1 rounded">+ Add Question</button>
+
+        <button type="submit"
+          class="bg-green-600 text-white px-4 py-2 rounded mt-3">Save Assessment</button>
+      </form>
     </div>
 
-    <div class="box" id="cbtHistory">
-      <h3>Uploaded Assessments</h3>
+    <!-- List of Assessments -->
+    <div class="bg-white shadow rounded-lg p-6">
+      <h2 class="text-xl font-semibold mb-4">All Theory Assessments</h2>
+      <div id="assessmentsList" class="space-y-4 text-sm text-gray-700">
+        <p>Loading assessments...</p>
+      </div>
     </div>
   </div>
-<!-- 📝 Compact Google Docs Sample Button with Hover Instructions -->
-<style>
-  #docs-button-container {
-    position: fixed;
-    bottom: 20px;
-    left: 20px;
-    z-index: 1000;
-  }
 
-  #docs-button {
-    background-color: #0b8043;
-    color: white;
-    padding: 12px;
-    border-radius: 50%;
-    font-size: 20px;
-    border: none;
-    cursor: pointer;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+  <!-- Firebase Logic -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import {
+      getFirestore, collection, addDoc, onSnapshot, updateDoc,
+      deleteDoc, doc, query, where, getDoc
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  #docs-info {
-    visibility: hidden;
-    opacity: 0;
-    position: absolute;
-    left: 60px;
-    bottom: 0;
-    width: 260px;
-    background: white;
-    color: #333;
-    padding: 12px;
-    border-radius: 8px;
-    font-size: 13px;
-    border: 1px solid #ccc;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-  }
-
-  #docs-button-container:hover #docs-info {
-    visibility: visible;
-    opacity: 1;
-  }
-
-  .label-text {
-    font-size: 11px;
-    position: absolute;
-    bottom: -16px;
-    left: 50%;
-    transform: translateX(-50%);
-    color: #444;
-    font-weight: bold;
-    pointer-events: none;
-  }
-</style>
-
-<div id="docs-button-container">
-  <a href="https://docs.google.com/document/d/1W7Q4epA2wnegy9nigIvV3E1lwczkyAoDYMTT11xRXM0/copy" target="_blank" id="docs-button" title="Open Google Docs Sample">
-    📄
-  </a>
-  <div class="label-text">Sample</div>
-  <div id="docs-info">
-    <strong>Steps:</strong><br>
-    1. Click to open sample<br>
-    2. Make a copy<br>
-    3. Rename correctly<br>
-    4. Set sharing to "Anyone with link can edit"<br>
-    5. Copy your link and paste it where needed
-  </div>
-</div>
-  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
       authDomain: "school-6425b.firebaseapp.com",
-      databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
       projectId: "school-6425b",
       storageBucket: "school-6425b.appspot.com",
       messagingSenderId: "929265479935",
       appId: "1:929265479935:web:af45ea5968ee50258a1cca"
     };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
-    const scriptURL = 'https://script.google.com/macros/s/AKfycbw2q_your_apps_script_id_here/exec';
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const form = document.getElementById("createForm");
+    const questionsDiv = document.getElementById("questions");
+    const addQuestionBtn = document.getElementById("addQuestion");
+    const assessmentsList = document.getElementById("assessmentsList");
+    const teacherClassInput = document.getElementById("teacherClass");
 
     let teacherClass = "";
 
-    auth.onAuthStateChanged(user => {
-      if (!user) return location.href = 'login.html';
-      db.ref(`users/${user.uid}`).once('value').then(snap => {
-        const data = snap.val();
-        if (data?.role !== 'teacher') return alert('Unauthorized'), location.href = 'dashboard.html';
-        teacherClass = data.class;
-        loadAssessments();
-      });
+    // Authenticate teacher and fetch class
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return (window.location.href = "login.html");
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists() || userSnap.data().role !== "teacher") {
+        alert("Access denied. Teachers only.");
+        return (window.location.href = "dashboard.html");
+      }
+      teacherClass = userSnap.data().class;
+      teacherClassInput.value = teacherClass;
+
+      loadAssessments();
     });
 
-    function uploadAssessment() {
-      const year = cbtYear.value;
-      const term = cbtTerm.value;
-      const subject = cbtSubject.value;
-      const type = cbtType.value;
-      const link = docLink.value.trim();
-      if (!year || !term || !subject || !type || !link) return alert('Please fill all fields.');
+    // ➕ Add question field
+    addQuestionBtn.addEventListener("click", () => {
+      const div = document.createElement("div");
+      div.className = "flex space-x-2";
+      div.innerHTML = `
+        <input type="text" placeholder="Question text" class="flex-1 p-2 border rounded questionText"/>
+        <input type="number" placeholder="Score" class="w-24 p-2 border rounded questionScore"/>
+      `;
+      questionsDiv.appendChild(div);
+    });
 
-      const id = Date.now();
-      db.ref(`docAssessments/${id}`).set({
-        id, year, term, subject, type, link,
-        class: teacherClass,
-        timestamp: new Date().toISOString(),
-        published: false
-      }).then(() => {
-        alert('Assessment uploaded');
-        loadAssessments();
-        docLink.value = '';
-      });
-    }
+    // 📝 Save assessment
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-    function togglePublish(id, currentState) {
-      db.ref(`docAssessments/${id}`).once('value').then(snap => {
-        const item = snap.val();
-        if (!item) return;
-        const { class: className, subject, link } = item;
-        if (!className || !subject || !link) return alert('Incomplete data.');
+      const schoolName = document.getElementById("schoolName").value;
+      const academicYear = document.getElementById("academicYear").value;
+      const term = document.getElementById("term").value;
+      const subject = document.getElementById("subject").value;
+      const assessmentName = document.getElementById("assessmentName").value;
 
-        if (!currentState) {
-          db.ref(`assessments/${className}/${subject}`).set({ link })
-            .then(() => db.ref(`docAssessments/${id}/published`).set(true))
-            .then(loadAssessments);
-        } else {
-          db.ref(`assessments/${className}/${subject}`).remove()
-            .then(() => db.ref(`docAssessments/${id}/published`).set(false))
-            .then(loadAssessments);
+      let questions = [];
+      let totalScore = 0;
+      document.querySelectorAll(".questionText").forEach((q, i) => {
+        const text = q.value;
+        const score = parseInt(document.querySelectorAll(".questionScore")[i].value) || 0;
+        if (text) {
+          questions.push({ text, score });
+          totalScore += score;
         }
       });
-    }
 
+      await addDoc(collection(db, "theoryAssessments"), {
+        schoolName, academicYear, term, class: teacherClass,
+        subject, assessmentName, questions, totalScore,
+        published: false, createdAt: Date.now()
+      });
+
+      form.reset();
+      questionsDiv.innerHTML = `
+        <div class="flex space-x-2">
+          <input type="text" placeholder="Question text" class="flex-1 p-2 border rounded questionText"/>
+          <input type="number" placeholder="Score" class="w-24 p-2 border rounded questionScore"/>
+        </div>`;
+    });
+
+    // 🔄 Load assessments
     function loadAssessments() {
-      const container = document.getElementById('cbtHistory');
-      const fy = filterYear.value, ft = filterTerm.value, fs = filterSubject.value, ftp = filterType.value;
-      container.innerHTML = '<h3>Uploaded Assessments</h3>';
+      const colRef = query(collection(db, "theoryAssessments"), where("class", "==", teacherClass));
 
-      db.ref('docAssessments').once('value', snap => {
-        const data = snap.val();
-        if (!data) return;
+      onSnapshot(colRef, (snapshot) => {
+        assessmentsList.innerHTML = "";
+        if (snapshot.empty) {
+          assessmentsList.innerHTML = `<p class="text-gray-500">No assessments yet.</p>`;
+          return;
+        }
 
-        Object.values(data).filter(item => item.class === teacherClass &&
-          (!fy || item.year === fy) && (!ft || item.term === ft) && (!fs || item.subject === fs) && (!ftp || item.type === ftp))
-          .forEach(item => {
-            const card = document.createElement('div');
-            card.style.margin = '1rem 0';
-            card.innerHTML = `
-              <h4>${item.subject} - ${item.type}</h4>
-              <p><strong>Year:</strong> ${item.year}</p>
-              <p><strong>Term:</strong> ${item.term}</p>
-              <p><strong>Class:</strong> ${item.class}</p>
-              <p><strong>Status:</strong> <span style="color:${item.published ? 'green' : 'gray'}">${item.published ? 'Published' : 'Unpublished'}</span></p>
-              <iframe src="${item.link.replace('/edit', '/preview')}" allowfullscreen></iframe>
-              <button onclick="togglePublish(${item.id}, ${item.published})">${item.published ? 'Unpublish' : 'Publish'}</button>
-              <button onclick="editAssessment(${item.id})">Edit</button>
-              <button onclick="deleteAssessment(${item.id})">Delete</button>
-            `;
-            container.appendChild(card);
-          });
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          const div = document.createElement("div");
+          div.className = "p-4 border rounded bg-gray-50";
+          div.innerHTML = `
+            <h3 class="font-bold text-lg">${data.assessmentName} - ${data.subject} (${data.term})</h3>
+            <p><strong>Class:</strong> ${data.class}</p>
+            <p><strong>Year:</strong> ${data.academicYear}</p>
+            <p><strong>Total Score:</strong> ${data.totalScore}</p>
+            <p>Status: <span class="font-semibold ${data.published ? 'text-green-600':'text-red-600'}">
+              ${data.published ? 'Published':'Draft'}</span></p>
+            <div class="mt-2 space-x-2">
+              <button class="bg-blue-500 text-white px-2 py-1 rounded" onclick="togglePublish('${docSnap.id}', ${data.published})">
+                ${data.published ? 'Unpublish':'Publish'}
+              </button>
+              <button class="bg-yellow-500 text-white px-2 py-1 rounded" onclick="editAssessment('${docSnap.id}')">Edit</button>
+              <button class="bg-red-600 text-white px-2 py-1 rounded" onclick="deleteAssessment('${docSnap.id}')">Delete</button>
+            </div>
+          `;
+          assessmentsList.appendChild(div);
+        });
       });
     }
 
-    function deleteAssessment(id) {
-      if (confirm('Are you sure you want to delete this assessment?')) {
-        db.ref(`docAssessments/${id}`).remove().then(loadAssessments);
-      }
-    }
+    // ✅ Toggle publish/unpublish
+    window.togglePublish = async (id, current) => {
+      const ref = doc(db, "theoryAssessments", id);
+      await updateDoc(ref, { published: !current });
+    };
 
-    function editAssessment(id) {
-      const newLink = prompt('Enter new Google Doc link:');
-      if (newLink) db.ref(`docAssessments/${id}/link`).set(newLink).then(loadAssessments);
-    }
+    // ✏️ Edit placeholder
+    window.editAssessment = (id) => {
+      alert("Edit function can be added later (repopulate form). For now, delete & re-add.");
+    };
+
+    // ❌ Delete assessment
+    window.deleteAssessment = async (id) => {
+      if (confirm("Are you sure you want to delete this assessment?")) {
+        await deleteDoc(doc(db, "theoryAssessments", id));
+      }
+    };
   </script>
 </body>
 </html>
+```
