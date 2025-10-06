@@ -159,10 +159,16 @@
         return;
       }
 
-      // Header
-      let header = `<tr><th class="p-3 border bg-blue-100 text-left font-semibold">Student</th>`;
+      // Header row with grouped subject titles
+      let header = `<tr><th rowspan="2" class="p-3 border bg-blue-100 text-left font-semibold">Student</th>`;
       subjects.forEach(subject => {
-        header += `<th class="p-3 border text-center font-semibold">${subject}<br><span class="text-[10px] text-gray-500">(CA1 / CA2 / Exam / HW / Proj)</span></th>`;
+        header += `<th colspan="${types.length}" class="p-3 border bg-blue-100 text-center font-semibold">${subject}</th>`;
+      });
+      header += "</tr><tr class='bg-blue-50'>";
+      subjects.forEach(() => {
+        types.forEach(type => {
+          header += `<th class="p-2 border text-center text-[11px] font-medium">${type}</th>`;
+        });
       });
       header += "</tr>";
       thead.innerHTML = header;
@@ -179,17 +185,18 @@
       const subjectStats = {};
 
       for (const student in grouped) {
-        let row = `<tr class="hover:bg-gray-50 transition"><td class="p-3 border font-semibold text-gray-800">${student}</td>`;
+        let row = `<tr class="even:bg-gray-50 hover:bg-gray-100 transition"><td class="p-3 border font-semibold text-gray-800">${student}</td>`;
         subjects.forEach(subject => {
           const scores = grouped[student][subject] || {};
-          const cellScores = types.map(t => scores[t] ?? "-");
           const validScores = Object.values(scores).filter(s => typeof s === "number");
           const avg = validScores.length ? (validScores.reduce((a,b)=>a+b,0)/validScores.length) : null;
 
           if (!subjectStats[subject]) subjectStats[subject] = [];
           if (avg) subjectStats[subject].push(avg);
 
-          row += `<td class="p-2 border text-center text-gray-700">${cellScores.join(" / ")}</td>`;
+          types.forEach(t => {
+            row += `<td class="p-2 border text-center text-gray-700">${scores[t] ?? "-"}</td>`;
+          });
         });
         row += "</tr>";
         tbody.insertAdjacentHTML("beforeend", row);
@@ -205,7 +212,7 @@
         const high = Math.max(...arr);
         const low = Math.min(...arr);
         const avg = (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(2);
-        summaryHtml += `<tr class="hover:bg-gray-50 transition"><td class="border p-2">${subject}</td><td class="border p-2 text-center">${high}</td><td class="border p-2 text-center">${low}</td><td class="border p-2 text-center">${avg}</td></tr>`;
+        summaryHtml += `<tr class="even:bg-gray-50 hover:bg-gray-100 transition"><td class="border p-2">${subject}</td><td class="border p-2 text-center">${high}</td><td class="border p-2 text-center">${low}</td><td class="border p-2 text-center">${avg}</td></tr>`;
       }
       summaryHtml += "</tbody></table></div>";
 
