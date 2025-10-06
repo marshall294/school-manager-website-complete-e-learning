@@ -5,11 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Class Teacher — Manage Theory Assessments</title>
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js" type="module"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js" type="module"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js" type="module"></script>
 </head>
 
 <body class="bg-gray-100 min-h-screen">
@@ -81,7 +76,8 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import {
-      getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, query, where
+      getFirestore, collection, addDoc, onSnapshot,
+      updateDoc, deleteDoc, doc, query, where, getDoc, getDocs
     } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     // 🔹 Firebase config for school-6425b
@@ -111,29 +107,55 @@
     const assessmentsList = document.getElementById("assessmentsList");
 
     let teacherData = {};
+    let teacherUid = null;
 
-    // 🔒 Auth check
+    // 🔒 Auth check and robust user lookup
     onAuthStateChanged(auth, async (user) => {
-      if (!user) return location.href = "login.html";
+      if (!user) return window.location.replace("login.html");
 
-      // Get teacher info from "users" collection
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("uid", "==", user.uid));
-      const snap = await onSnapshot(q, (snapshot) => {
-        if (snapshot.empty) {
-          alert("Access denied — not a registered class teacher.");
-          return location.href = "dashboard.html";
-        }
-        snapshot.forEach(docSnap => {
-          teacherData = docSnap.data();
-          if (teacherData.role !== "teacher") {
-            alert("Access denied — only class teachers allowed.");
-            return location.href = "dashboard.html";
+      teacherUid = user.uid;
+      try {
+        // 1) Try document with id = uid (common pattern)
+        const userDocRef = doc(db, "users", user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+
+        if (userDocSnap.exists()) {
+          teacherData = userDocSnap.data();
+        } else {
+          // 2) Fallback: query where uid == user.uid
+          const usersRef = collection(db, "users");
+          const q = query(usersRef, where("uid", "==", user.uid));
+          const querySnap = await getDocs(q);
+          if (querySnap.empty) {
+            console.warn("No user record found by doc id or uid query for:", user.uid);
+            alert("Access denied — not a registered class teacher.");
+            return window.location.replace("dashboard.html");
+          } else {
+            // take first match
+            teacherData = querySnap.docs[0].data();
           }
-          displayTeacherInfo();
-          loadAssessments();
-        });
-      });
+        }
+
+        // Validate role & class
+        if (!teacherData || teacherData.role !== "teacher") {
+          console.warn("User is not teacher:", teacherData);
+          alert("Access denied — only class teachers allowed.");
+          return window.location.replace("dashboard.html");
+        }
+        if (!teacherData.class) {
+          console.warn("Teacher has no class assigned:", teacherData);
+          alert("No class assigned to your account. Contact admin.");
+          return window.location.replace("dashboard.html");
+        }
+
+        // All good — show info and load assessments
+        displayTeacherInfo();
+        loadAssessments();
+      } catch (err) {
+        console.error("Error verifying teacher account:", err);
+        alert("An error occurred while verifying your account. Check console.");
+        return window.location.replace("dashboard.html");
+      }
     });
 
     // 🧑 Display teacher info
@@ -184,40 +206,48 @@
         }
       });
 
-      await addDoc(collection(db, "theoryAssessments"), {
-        class: cls,
-        school,
-        session,
-        year,
-        subject,
-        assessmentName,
-        term,
-        questions,
-        totalScore,
-        teacherId: auth.currentUser.uid,
-        teacherName: teacherData.name || "",
-        published: false,
-        createdAt: Date.now()
-      });
+      try {
+        await addDoc(collection(db, "theoryAssessments"), {
+          class: cls,
+          school,
+          session,
+          year,
+          subject,
+          assessmentName,
+          term,
+          questions,
+          totalScore,
+          teacherId: teacherUid,
+          teacherName: teacherData.name || "",
+          published: false,
+          createdAt: Date.now()
+        });
 
-      form.reset();
-      questionsDiv.innerHTML = `
-        <div class="flex space-x-2">
-          <input type="text" placeholder="Question text" class="flex-1 p-2 border rounded questionText"/>
-          <input type="number" placeholder="Score" class="w-24 p-2 border rounded questionScore"/>
-        </div>`;
-      alert("Assessment saved successfully!");
+        form.reset();
+        questionsDiv.innerHTML = `
+          <div class="flex space-x-2">
+            <input type="text" placeholder="Question text" class="flex-1 p-2 border rounded questionText"/>
+            <input type="number" placeholder="Score" class="w-24 p-2 border rounded questionScore"/>
+          </div>`;
+        alert("Assessment saved successfully!");
+      } catch (err) {
+        console.error("Error saving assessment:", err);
+        alert("Failed to save assessment. Check console.");
+      }
     });
 
     // 📋 Load assessments for teacher's class
     function loadAssessments() {
+      assessmentsList.innerHTML = `<p class="text-gray-500">Loading assessments...</p>`;
       const colRef = collection(db, "theoryAssessments");
       const q = query(colRef, where("class", "==", teacherData.class));
 
+      // realtime updates for the class only
       onSnapshot(q, (snapshot) => {
         assessmentsList.innerHTML = "";
         if (snapshot.empty) {
           assessmentsList.innerHTML = `<p class="text-gray-500">No assessments yet.</p>`;
+          return;
         }
         snapshot.forEach((docSnap) => {
           const data = docSnap.data();
@@ -238,18 +268,30 @@
           `;
           assessmentsList.appendChild(div);
         });
+      }, (err) => {
+        console.error("Error loading assessments:", err);
+        assessmentsList.innerHTML = `<p class="text-red-600">Error loading assessments. Check console.</p>`;
       });
     }
 
     // ✅ Toggle publish/unpublish
     window.togglePublish = async (id, current) => {
-      await updateDoc(doc(db, "theoryAssessments", id), { published: !current });
+      try {
+        await updateDoc(doc(db, "theoryAssessments", id), { published: !current });
+      } catch (err) {
+        console.error("Error toggling publish:", err);
+        alert("Failed to update status. Check console.");
+      }
     };
 
     // ❌ Delete assessment
     window.deleteAssessment = async (id) => {
-      if (confirm("Are you sure you want to delete this assessment?")) {
+      if (!confirm("Are you sure you want to delete this assessment?")) return;
+      try {
         await deleteDoc(doc(db, "theoryAssessments", id));
+      } catch (err) {
+        console.error("Error deleting assessment:", err);
+        alert("Failed to delete. Check console.");
       }
     };
   </script>
