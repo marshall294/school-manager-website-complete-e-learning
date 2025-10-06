@@ -1,96 +1,71 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Teacher - Theory Assessments</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Firebase v8 for Auth + Realtime DB -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Teacher — Theory Assessment</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
-  <!-- Firebase v10 (modular) for Firestore -->
-  <script type="module" id="firestoreModule">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc } 
-      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-    // Attach Firestore functions to window for global use
-    window.initFirestore = initializeApp;
-    window.getFS = getFirestore;
-    window.fsCollection = collection;
-    window.fsAddDoc = addDoc;
-    window.fsOnSnapshot = onSnapshot;
-    window.fsUpdateDoc = updateDoc;
-    window.fsDeleteDoc = deleteDoc;
-    window.fsDoc = doc;
-  </script>
 </head>
 
 <body class="bg-gray-100 min-h-screen">
+  <div class="max-w-5xl mx-auto py-10 px-4">
+    <h1 class="text-3xl font-bold text-center text-blue-700 mb-6">Teacher — Manage Theory Assessments</h1>
 
-  <div class="max-w-5xl mx-auto py-8 px-4">
-    <h1 class="text-3xl font-bold text-center mb-6 text-blue-700">Teacher - Manage Theory Assessments</h1>
+    <!-- Form -->
+    <div class="bg-white rounded shadow p-6 mb-8">
+      <h2 class="text-xl font-semibold text-blue-600 mb-4">Create New Assessment</h2>
+      <form id="theoryForm" class="space-y-3">
+        <div>
+          <label class="block text-sm font-medium">Subject</label>
+          <input type="text" id="theorySubject" required class="w-full p-2 border rounded"/>
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Assessment Name</label>
+          <select id="theoryType" class="w-full p-2 border rounded" required>
+            <option value="">Select Type</option>
+            <option>CA1</option>
+            <option>CA2</option>
+            <option>Homework</option>
+            <option>Examination</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium">Term</label>
+          <select id="theoryTerm" class="w-full p-2 border rounded" required>
+            <option value="">Select Term</option>
+            <option>First Term</option>
+            <option>Second Term</option>
+            <option>Third Term</option>
+          </select>
+        </div>
 
-    <!-- Teacher Info -->
-    <div id="teacherInfo" class="bg-white shadow rounded-lg p-6 mb-6 hidden">
-      <p><strong>Teacher:</strong> <span id="tName"></span></p>
-      <p><strong>Class:</strong> <span id="tClass"></span></p>
-      <p><strong>School:</strong> <span id="tSchool"></span></p>
-      <p><strong>Session:</strong> <span id="tSession"></span></p>
-      <p><strong>Academic Year:</strong> <span id="tYear"></span></p>
-    </div>
-
-    <!-- Create Assessment Form -->
-    <div class="bg-white shadow rounded-lg p-6 mb-6 hidden" id="mainForm">
-      <h2 class="text-xl font-semibold mb-4 text-blue-600">Create New Assessment</h2>
-      <form id="createForm" class="space-y-4">
-        <input type="text" id="subject" placeholder="Subject" required
-          class="w-full p-2 border rounded"/>
-
-        <select id="assessmentName" required class="w-full p-2 border rounded">
-          <option value="">Select Assessment Name</option>
-          <option>CA1</option>
-          <option>CA2</option>
-          <option>Homework</option>
-          <option>Examination</option>
-        </select>
-
-        <select id="term" required class="w-full p-2 border rounded">
-          <option value="">Select Term</option>
-          <option>First Term</option>
-          <option>Second Term</option>
-          <option>Third Term</option>
-        </select>
-
-        <!-- Questions -->
-        <div id="questions" class="space-y-2">
+        <!-- Question Inputs -->
+        <div id="questionsContainer" class="space-y-2">
           <div class="flex space-x-2">
-            <input type="text" placeholder="Question text" class="flex-1 p-2 border rounded questionText"/>
-            <input type="number" placeholder="Score" class="w-24 p-2 border rounded questionScore"/>
+            <input type="text" placeholder="Question text" class="flex-1 p-2 border rounded qText">
+            <input type="number" placeholder="Score" class="w-24 p-2 border rounded qScore">
           </div>
         </div>
-        <button type="button" id="addQuestion"
-          class="bg-blue-500 text-white px-3 py-1 rounded">+ Add Question</button>
+        <button type="button" id="addQuestion" class="bg-blue-500 text-white px-3 py-1 rounded">+ Add Question</button>
 
-        <button type="submit"
-          class="bg-green-600 text-white px-4 py-2 rounded mt-3">Save Assessment</button>
+        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded mt-3">Save Assessment</button>
       </form>
     </div>
 
-    <!-- List of Assessments -->
-    <div class="bg-white shadow rounded-lg p-6 hidden" id="listSection">
-      <h2 class="text-xl font-semibold mb-4 text-blue-600">All Assessments</h2>
-      <div id="assessmentsList" class="space-y-4 text-sm text-gray-700">
+    <!-- List -->
+    <div class="bg-white rounded shadow p-6">
+      <h2 class="text-xl font-semibold text-blue-600 mb-4">My Assessments</h2>
+      <div id="theoryList" class="space-y-3">
         <p>Loading assessments...</p>
       </div>
     </div>
   </div>
 
   <script>
-    // Firebase (Realtime DB + Auth) init
+    // --- Firebase setup ---
     const firebaseConfig = {
       apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
       authDomain: "school-6425b.firebaseapp.com",
@@ -104,135 +79,132 @@
     const auth = firebase.auth();
     const db = firebase.database();
 
-    let teacherData = null;
-    let fsApp, fsDb, fsCol;
+    let teacherClass = '', teacherName = '', teacherSchool = '';
 
-    auth.onAuthStateChanged(async (user) => {
-      if (!user) return location.href = "login.html";
-      const snap = await db.ref("users/" + user.uid).once("value");
-      teacherData = snap.val();
-
-      if (!teacherData || teacherData.role !== "teacher") {
-        alert("Access denied — not a registered class teacher.");
-        return location.href = "dashboard.html";
-      }
-
-      initTeacherPage(teacherData);
+    auth.onAuthStateChanged(user => {
+      if (!user) return location.href = 'login.html';
+      db.ref(`users/${user.uid}`).once('value').then(snap => {
+        const data = snap.val() || {};
+        if (data.role !== 'teacher') {
+          alert('Unauthorized');
+          return location.href = 'dashboard.html';
+        }
+        teacherClass = data.class;
+        teacherName = data.name || 'Unknown';
+        teacherSchool = data.school || 'N/A';
+        loadTheoryAssessments();
+      });
     });
 
-    async function initTeacherPage(data) {
-      document.getElementById("teacherInfo").classList.remove("hidden");
-      document.getElementById("mainForm").classList.remove("hidden");
-      document.getElementById("listSection").classList.remove("hidden");
+    // --- Add new question input ---
+    document.getElementById('addQuestion').onclick = () => {
+      const div = document.createElement('div');
+      div.className = 'flex space-x-2';
+      div.innerHTML = `
+        <input type="text" placeholder="Question text" class="flex-1 p-2 border rounded qText">
+        <input type="number" placeholder="Score" class="w-24 p-2 border rounded qScore">
+      `;
+      document.getElementById('questionsContainer').appendChild(div);
+    };
 
-      const year = new Date().getFullYear();
-      const session = `${year}/${year + 1}`;
+    // --- Save assessment ---
+    document.getElementById('theoryForm').onsubmit = e => {
+      e.preventDefault();
+      const subject = theorySubject.value.trim();
+      const type = theoryType.value;
+      const term = theoryTerm.value;
+      if (!subject || !type || !term) return alert("Fill all fields");
 
-      document.getElementById("tName").textContent = data.name || "N/A";
-      document.getElementById("tClass").textContent = data.class || "N/A";
-      document.getElementById("tSchool").textContent = data.school || "ORLI International Academy";
-      document.getElementById("tSession").textContent = session;
-      document.getElementById("tYear").textContent = year;
-
-      // Firestore setup (after Realtime check passes)
-      fsApp = window.initFirestore(firebaseConfig);
-      fsDb = window.getFS(fsApp);
-      fsCol = window.fsCollection(fsDb, "theoryAssessments");
-
-      loadAssessmentFunctions(fsCol);
-    }
-
-    async function loadAssessmentFunctions(colRef) {
-      const questionsDiv = document.getElementById("questions");
-      const addQuestionBtn = document.getElementById("addQuestion");
-      const assessmentsList = document.getElementById("assessmentsList");
-      const form = document.getElementById("createForm");
-
-      addQuestionBtn.addEventListener("click", () => {
-        const div = document.createElement("div");
-        div.className = "flex space-x-2";
-        div.innerHTML = `
-          <input type="text" placeholder="Question text" class="flex-1 p-2 border rounded questionText"/>
-          <input type="number" placeholder="Score" class="w-24 p-2 border rounded questionScore"/>
-        `;
-        questionsDiv.appendChild(div);
+      const questions = [];
+      let total = 0;
+      document.querySelectorAll('.qText').forEach((q, i) => {
+        const text = q.value.trim();
+        const score = parseInt(document.querySelectorAll('.qScore')[i].value) || 0;
+        if (text) { questions.push({ text, score }); total += score; }
       });
 
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const subject = document.getElementById("subject").value;
-        const assessmentName = document.getElementById("assessmentName").value;
-        const term = document.getElementById("term").value;
+      if (!questions.length) return alert("Add at least one question");
 
-        let questions = [];
-        let totalScore = 0;
-        document.querySelectorAll(".questionText").forEach((q, i) => {
-          const text = q.value.trim();
-          const score = parseInt(document.querySelectorAll(".questionScore")[i].value) || 0;
-          if (text) {
-            questions.push({ text, score });
-            totalScore += score;
-          }
-        });
-
-        await window.fsAddDoc(colRef, {
-          teacher: teacherData.name,
-          class: teacherData.class,
-          school: teacherData.school || "ORLI International Academy",
-          subject, assessmentName, term,
-          questions, totalScore,
-          published: false,
-          session: document.getElementById("tSession").textContent,
-          year: document.getElementById("tYear").textContent,
-          createdAt: Date.now()
-        });
-
-        alert("Assessment saved successfully!");
-        form.reset();
-        questionsDiv.innerHTML = `
+      const id = Date.now();
+      db.ref(`theoryBank/${id}`).set({
+        id,
+        teacher: teacherName,
+        class: teacherClass,
+        school: teacherSchool,
+        subject,
+        type,
+        term,
+        totalScore: total,
+        questions,
+        published: false,
+        createdAt: new Date().toISOString()
+      }).then(() => {
+        alert("Assessment saved!");
+        document.getElementById('theoryForm').reset();
+        document.getElementById('questionsContainer').innerHTML = `
           <div class="flex space-x-2">
-            <input type="text" placeholder="Question text" class="flex-1 p-2 border rounded questionText"/>
-            <input type="number" placeholder="Score" class="w-24 p-2 border rounded questionScore"/>
+            <input type="text" placeholder="Question text" class="flex-1 p-2 border rounded qText">
+            <input type="number" placeholder="Score" class="w-24 p-2 border rounded qScore">
           </div>`;
       });
+    };
 
-      window.fsOnSnapshot(colRef, (snapshot) => {
-        assessmentsList.innerHTML = "";
-        if (snapshot.empty) {
-          assessmentsList.innerHTML = `<p class="text-gray-500">No assessments yet.</p>`;
-        }
-        snapshot.forEach((docSnap) => {
-          const data = docSnap.data();
-          if (data.class !== teacherData.class) return; // show only teacher's class
-
-          const div = document.createElement("div");
-          div.className = "p-4 border rounded bg-gray-50";
-          div.innerHTML = `
-            <h3 class="font-bold">${data.assessmentName} - ${data.subject} (${data.term})</h3>
-            <p>Total Score: ${data.totalScore}</p>
-            <p>Status: <span class="font-semibold ${data.published ? 'text-green-600':'text-red-600'}">
-              ${data.published ? 'Published':'Draft'}</span></p>
-            <div class="mt-2 space-x-2">
-              <button class="bg-blue-500 text-white px-2 py-1 rounded" onclick="togglePublish('${docSnap.id}', ${data.published})">
-                ${data.published ? 'Unpublish':'Publish'}
-              </button>
-              <button class="bg-yellow-500 text-white px-2 py-1 rounded" onclick="editAssessment('${docSnap.id}')">Edit</button>
-              <button class="bg-red-600 text-white px-2 py-1 rounded" onclick="deleteAssessment('${docSnap.id}')">Delete</button>
-            </div>
-          `;
-          assessmentsList.appendChild(div);
-        });
+    // --- Load all assessments ---
+    function loadTheoryAssessments() {
+      const ref = db.ref('theoryBank');
+      const list = document.getElementById('theoryList');
+      list.innerHTML = '';
+      ref.off();
+      ref.on('child_added', snap => {
+        const data = snap.val();
+        if (data.class !== teacherClass) return;
+        appendAssessment(data);
       });
+      ref.on('child_changed', snap => {
+        const data = snap.val();
+        if (data.class !== teacherClass) return;
+        const old = document.getElementById(`theory-${data.id}`);
+        if (old) old.remove();
+        appendAssessment(data);
+      });
+      ref.on('child_removed', snap => {
+        const id = snap.key;
+        const el = document.getElementById(`theory-${id}`);
+        if (el) el.remove();
+      });
+    }
 
-      window.togglePublish = async (id, current) => {
-        await window.fsUpdateDoc(window.fsDoc(fsDb, "theoryAssessments", id), { published: !current });
-      };
-      window.editAssessment = (id) => alert("Edit function coming soon!");
-      window.deleteAssessment = async (id) => {
-        if (confirm("Are you sure to delete?")) {
-          await window.fsDeleteDoc(window.fsDoc(fsDb, "theoryAssessments", id));
-        }
-      };
+    // --- Append one assessment card ---
+    function appendAssessment(item) {
+      const div = document.createElement('div');
+      div.className = 'border p-4 rounded bg-gray-50';
+      div.id = `theory-${item.id}`;
+      div.innerHTML = `
+        <h3 class="font-bold">${item.subject} - ${item.type} (${item.term})</h3>
+        <p><strong>Class:</strong> ${item.class}</p>
+        <p><strong>Total Score:</strong> ${item.totalScore}</p>
+        <p><strong>Status:</strong> <span class="${item.published ? 'text-green-600' : 'text-red-600'}">
+          ${item.published ? 'Published' : 'Unpublished'}</span></p>
+        <div class="space-x-2 mt-2">
+          <button onclick="togglePublish(${item.id}, ${item.published})" class="bg-blue-500 text-white px-2 py-1 rounded">
+            ${item.published ? 'Unpublish' : 'Publish'}
+          </button>
+          <button onclick="deleteAssessment(${item.id})" class="bg-red-600 text-white px-2 py-1 rounded">Delete</button>
+        </div>
+      `;
+      document.getElementById('theoryList').prepend(div);
+    }
+
+    // --- Toggle publish ---
+    function togglePublish(id, current) {
+      db.ref(`theoryBank/${id}/published`).set(!current);
+    }
+
+    // --- Delete assessment ---
+    function deleteAssessment(id) {
+      if (confirm("Delete this assessment?")) {
+        db.ref(`theoryBank/${id}`).remove();
+      }
     }
   </script>
 </body>
