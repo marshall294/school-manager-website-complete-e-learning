@@ -59,15 +59,10 @@
   <!-- Broadsheet Table -->
   <section id="tableContainer" class="overflow-x-auto bg-white p-5 rounded-lg shadow hidden">
     <h3 class="text-lg font-semibold text-gray-700 mb-3 border-b pb-2">Student Broadsheet</h3>
-    <table class="min-w-full text-sm border-collapse border border-gray-200 rounded-lg overflow-hidden">
+    <table class="min-w-full text-sm border-collapse border border-gray-300 rounded-lg overflow-hidden">
       <thead id="thead" class="bg-blue-50 text-gray-700 text-xs uppercase tracking-wide"></thead>
       <tbody id="tbody" class="text-gray-700"></tbody>
     </table>
-  </section>
-
-  <!-- Summary Section -->
-  <section id="summaryContainer" class="mt-8 hidden bg-white p-5 rounded-lg shadow">
-    <h3 class="font-semibold text-lg text-gray-800 mb-4 border-b pb-2">Summary</h3>
   </section>
 
   <script>
@@ -86,41 +81,35 @@
     const db = firebase.database();
 
     const subjects = [
-      "Science", "Home Economics", "Geography", "Agricultural Science", "Mathematics",
-      "Civic Education", "English Studies", "History", "Christian Religious Studies",
-      "Islam Religious Studies", "Information and Communication Technology",
-      "Personal Social and Health Education", "General Knowledge"
+      "Agricultural Science", "Christian Religious Studies", "Civic Education", "English Studies",
+      "Geography", "History", "Home Economics", "Information and Communication Technology",
+      "Mathematics", "Personal Social and Health Education", "Science"
     ];
 
-    const types = ["CA 1", "CA 2", "Examination", "Homework", "Project"];
+    const types = ["CA1", "CA2", "Assign", "Proj", "Exam"];
 
     const filterYear = document.getElementById("filterYear");
     const filterTerm = document.getElementById("filterTerm");
     const generateBtn = document.getElementById("generateBtn");
     const tableContainer = document.getElementById("tableContainer");
-    const summaryContainer = document.getElementById("summaryContainer");
     const thead = document.getElementById("thead");
     const tbody = document.getElementById("tbody");
     const teacherClassDisplay = document.getElementById("teacherClassDisplay");
 
     let teacherClass = "";
 
-    // Logout
     document.getElementById("logoutBtn").addEventListener("click", () => {
       auth.signOut().then(() => window.location.href = "login.html");
     });
 
-    // Auth Check
     auth.onAuthStateChanged(async (user) => {
       if (!user) return (window.location.href = "login.html");
-
       const snap = await db.ref(`users/${user.uid}`).once("value");
       const teacher = snap.val();
       if (!teacher || teacher.role !== "teacher") {
         alert("Access denied.");
         return (window.location.href = "dashboard.html");
       }
-
       teacherClass = teacher.class || "";
       teacherClassDisplay.textContent = teacherClass || "Not Assigned";
     });
@@ -129,7 +118,6 @@
       const year = filterYear.value;
       const term = filterTerm.value;
       if (!year || !term) return alert("Please select both year and term.");
-
       await generateBroadsheet(year, term);
     });
 
@@ -144,20 +132,13 @@
 
     async function generateBroadsheet(year, term) {
       tableContainer.classList.add("hidden");
-      summaryContainer.classList.add("hidden");
-
       const snap = await db.ref("theorySubmissions").once("value");
       const data = snap.val() || {};
 
       const submissions = [];
-
       Object.entries(data).forEach(([assId, studentSubs]) => {
         Object.entries(studentSubs).forEach(([uid, sub]) => {
-          if (
-            sub.studentClass === teacherClass &&
-            sub.year === year &&
-            sub.term === term
-          ) {
+          if (sub.studentClass === teacherClass && sub.year === year && sub.term === term) {
             submissions.push(sub);
           }
         });
@@ -168,87 +149,60 @@
         return;
       }
 
-      // Header with grouped subjects + Total/Average/Grade
-      let header = `<tr>
-        <th rowspan="2" class="p-3 border bg-blue-100 text-left font-semibold">Student</th>`;
+      // Build header rows
+      let header1 = `<tr><th rowspan="2" class="p-3 border bg-blue-100 text-left font-semibold">Student</th>`;
       subjects.forEach(subject => {
-        header += `<th colspan="${types.length}" class="p-3 border bg-blue-100 text-center font-semibold">${subject}</th>`;
+        header1 += `<th colspan="${types.length}" class="p-3 border bg-blue-100 text-center font-semibold">${subject}</th>`;
       });
-      header += `<th rowspan="2" class="p-3 border bg-blue-100 text-center font-semibold">Total</th>
-                 <th rowspan="2" class="p-3 border bg-blue-100 text-center font-semibold">Average</th>
-                 <th rowspan="2" class="p-3 border bg-blue-100 text-center font-semibold">Grade</th>
-                 </tr><tr class="bg-blue-50">`;
+      header1 += `<th rowspan="2" class="p-3 border bg-blue-100 text-center font-semibold">Total</th>
+                  <th rowspan="2" class="p-3 border bg-blue-100 text-center font-semibold">Average</th>
+                  <th rowspan="2" class="p-3 border bg-blue-100 text-center font-semibold">Grade</th></tr>`;
+      let header2 = `<tr>`;
       subjects.forEach(() => {
-        types.forEach(type => {
-          header += `<th class="p-2 border text-center text-[11px] font-medium">${type}</th>`;
+        types.forEach(t => {
+          header2 += `<th class="p-2 border text-center text-[11px] font-medium">${t}</th>`;
         });
       });
-      header += "</tr>";
-      thead.innerHTML = header;
+      header2 += `</tr>`;
+      thead.innerHTML = header1 + header2;
 
-      // Group by student
+      // Group submissions by student
       const grouped = {};
       submissions.forEach(s => {
         if (!grouped[s.studentName]) grouped[s.studentName] = {};
         if (!grouped[s.studentName][s.subject]) grouped[s.studentName][s.subject] = {};
-        grouped[s.studentName][s.subject][s.type] = s.totalScore || 0;
+        grouped[s.studentName][s.subject][s.type] = parseFloat(s.totalScore) || 0;
       });
 
       tbody.innerHTML = "";
-      const subjectStats = {};
-
       for (const student in grouped) {
-        let row = `<tr class="even:bg-gray-50 hover:bg-gray-100 transition"><td class="p-3 border font-semibold text-gray-800">${student}</td>`;
-        let grandTotal = 0;
-        let subjectCount = 0;
+        let row = `<tr class="even:bg-gray-50 hover:bg-gray-100 transition"><td class="p-3 border font-semibold">${student}</td>`;
+        let total = 0, subjectCount = 0;
 
         subjects.forEach(subject => {
-          const scores = grouped[student][subject] || {};
-          const validScores = Object.values(scores).filter(s => typeof s === "number");
-          const avg = validScores.length ? (validScores.reduce((a,b)=>a+b,0)/validScores.length) : 0;
-
-          if (avg > 0) {
-            grandTotal += avg;
+          const subjectScores = grouped[student][subject] || {};
+          let subjectTotal = 0;
+          types.forEach(t => {
+            const score = subjectScores[t] || 0;
+            row += `<td class="p-2 border text-center">${score}</td>`;
+            subjectTotal += score;
+          });
+          if (subjectTotal > 0) {
+            total += subjectTotal;
             subjectCount++;
           }
-
-          if (!subjectStats[subject]) subjectStats[subject] = [];
-          if (avg) subjectStats[subject].push(avg);
-
-          types.forEach(t => {
-            row += `<td class="p-2 border text-center text-gray-700">${scores[t] ?? "-"}</td>`;
-          });
         });
 
-        const overallAvg = subjectCount ? (grandTotal / subjectCount).toFixed(2) : 0;
-        const grade = getGrade(overallAvg);
-
-        row += `
-          <td class="p-2 border text-center font-semibold text-gray-800">${grandTotal.toFixed(2)}</td>
-          <td class="p-2 border text-center text-gray-700">${overallAvg}</td>
-          <td class="p-2 border text-center font-semibold ${grade === "A" ? "text-green-600" : grade === "B" ? "text-blue-600" : grade === "C" ? "text-yellow-600" : grade === "D" ? "text-orange-600" : "text-red-600"}">${grade}</td>
-        </tr>`;
-
+        const average = subjectCount ? (total / subjectCount).toFixed(2) : 0;
+        const grade = getGrade(average);
+        row += `<td class="p-2 border text-center font-semibold">${total.toFixed(2)}</td>`;
+        row += `<td class="p-2 border text-center">${average}</td>`;
+        row += `<td class="p-2 border text-center font-bold ${grade === 'A' ? 'text-green-600' : grade === 'B' ? 'text-blue-600' : grade === 'C' ? 'text-yellow-600' : grade === 'D' ? 'text-orange-600' : 'text-red-600'}">${grade}</td>`;
+        row += `</tr>`;
         tbody.insertAdjacentHTML("beforeend", row);
       }
 
-      // Summary section
-      let summaryHtml = `<h3 class="font-semibold text-lg mb-3 text-gray-700">Class Summary (${teacherClass}, ${term}, ${year})</h3>`;
-      summaryHtml += `<div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-200 rounded-lg">
-        <thead class="bg-blue-50 text-gray-700 uppercase text-xs tracking-wide">
-          <tr><th class="border p-2 text-left">Subject</th><th class="border p-2">Highest</th><th class="border p-2">Lowest</th><th class="border p-2">Average</th></tr>
-        </thead><tbody>`;
-      for (const [subject, arr] of Object.entries(subjectStats)) {
-        const high = Math.max(...arr);
-        const low = Math.min(...arr);
-        const avg = (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(2);
-        summaryHtml += `<tr class="even:bg-gray-50 hover:bg-gray-100 transition"><td class="border p-2">${subject}</td><td class="border p-2 text-center">${high}</td><td class="border p-2 text-center">${low}</td><td class="border p-2 text-center">${avg}</td></tr>`;
-      }
-      summaryHtml += "</tbody></table></div>";
-
-      summaryContainer.innerHTML = summaryHtml;
       tableContainer.classList.remove("hidden");
-      summaryContainer.classList.remove("hidden");
     }
   </script>
 </body>
