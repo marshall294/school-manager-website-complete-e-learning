@@ -44,7 +44,6 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
       position: fixed;
       top: 0;
       left: 0;
@@ -128,6 +127,7 @@
       overflow-y: auto;
       padding: 30px;
       margin-left: 250px;
+      padding-bottom: 250px;
     }
 
     .main-content h2 {
@@ -151,7 +151,6 @@
       grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
       gap: 50px;
       margin-top: 5px;
-      padding-bottom: 5px;
     }
 
     .tile-frame {
@@ -187,15 +186,63 @@
       border: none;
     }
 
+    /* === Footer Section === */
     footer {
       background: var(--sidebar-bg);
       color: white;
-      text-align: center;
-      padding: 12px 0;
+      padding: 40px 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 30px;
+      position: relative;
+    }
+
+    footer h3 {
+      font-size: 18px;
+      margin-bottom: 10px;
+      color: #00bfa5;
+    }
+
+    footer p, footer a, footer li {
       font-size: 14px;
-      position: fixed;
-      bottom: 0;
-      width: 100%;
+      line-height: 1.8;
+      color: #ddd;
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      color: #00bfa5;
+    }
+
+    .social-icons {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .social-icons a {
+      background: #00bfa5;
+      color: white;
+      padding: 8px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: 0.3s;
+    }
+
+    .social-icons a:hover {
+      background: #00796b;
+    }
+
+    .footer-bottom {
+      grid-column: 1 / -1;
+      text-align: center;
+      font-size: 13px;
+      color: #ccc;
+      border-top: 1px solid rgba(255,255,255,0.2);
+      padding-top: 15px;
     }
 
     @media (max-width: 768px) {
@@ -242,15 +289,13 @@
 
   <div class="dashboard-wrapper">
     <aside class="sidebar" id="sidebar">
-      <ul id="navItems" class="sidebar-links">
-        <!-- Filled dynamically from Firebase -->
-      </ul>
+      <ul id="navItems" class="sidebar-links"></ul>
     </aside>
 
     <main class="main-content">
       <h2 id="roleTitle">Dashboard</h2>
-      <p>ORLI International Academy is a center of academic excellence.</p>
-      <p>Use the side navigation menu to explore your personalized dashboard tools and resources.</p>
+      <p>ORLI International Academy is a center of academic excellence and moral values.</p>
+      <p>Use the side navigation to explore your personalized resources and activities.</p>
 
       <div class="tiles-grid">
         <div class="tile-frame">
@@ -282,14 +327,60 @@
   </div>
 
   <footer>
-    &copy; 2025 ORLI International Academy. All rights reserved.
+    <div>
+      <h3>Contact Us</h3>
+      <p>ORLI International Academy</p>
+      <p>12 Harmony Street, Garki II, Abuja, Nigeria</p>
+      <p>📞 +234 803 456 7890</p>
+      <p>📧 info@orliacademy.edu.ng</p>
+    </div>
+
+    <div>
+      <h3>Admissions</h3>
+      <p>We welcome applications for Nursery, Primary, and Secondary levels.</p>
+      <a href="#">Apply Now →</a><br/>
+      <a href="#">Admission Guidelines</a>
+    </div>
+
+    <div>
+      <h3>Curriculum</h3>
+      <ul>
+        <li>British & Nigerian Curriculum</li>
+        <li>STEM & Digital Literacy</li>
+        <li>Languages (French, Yoruba, Hausa)</li>
+        <li>Creative & Performing Arts</li>
+      </ul>
+    </div>
+
+    <div>
+      <h3>Extra-Curricular</h3>
+      <ul>
+        <li>Sports & Athletics</li>
+        <li>Music & Drama</li>
+        <li>Science Club</li>
+        <li>Debate & Literature Club</li>
+      </ul>
+    </div>
+
+    <div>
+      <h3>Follow Us</h3>
+      <div class="social-icons">
+        <a href="#"><span>🌐</span></a>
+        <a href="#"><span>📘</span></a>
+        <a href="#"><span>📸</span></a>
+        <a href="#"><span>🐦</span></a>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      &copy; 2025 ORLI International Academy — Excellence, Discipline & Integrity.
+    </div>
   </footer>
 
   <script>
     function toggleSidebar() {
       document.getElementById('sidebar').classList.toggle('active');
     }
-
     function toggleDarkMode() {
       document.body.classList.toggle('dark-mode');
     }
@@ -298,156 +389,79 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
-    authDomain: "school-6425b.firebaseapp.com",
-    databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
-    projectId: "school-6425b",
-    storageBucket: "school-6425b.appspot.com",
-    messagingSenderId: "929265479935",
-    appId: "1:929265479935:web:af45ea5968ee50258a1cca"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+      authDomain: "school-6425b.firebaseapp.com",
+      databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+      projectId: "school-6425b",
+      storageBucket: "school-6425b.appspot.com",
+      messagingSenderId: "929265479935",
+      appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-  const navItemsByRole = {
-    'student': [
-      ['🏠', 'Dashboard Home', '#'],
-      ['📝', 'Take CBT', 'take-cbt.html'],
-      ['📄', 'Take Theory Assessment', 'take-theory.html'],
-      ['📊', 'Progress Report', 'student-progress-report.html'],
-      ['👤', 'Profile', 'page-not-ready.html'],
-      ['🚪', 'Logout', '#logout']
-    ],
-    'teacher': [
-      ['🧾', 'Upload CBT', 'cbt-upload.html'],
-      ['📄', 'Upload Theory', 'upload-theory.html'],
-      ['📋', 'Mark Theory', 'mark-theory.html'],
-      ['📈', 'View CBT Results', 'view-results.html'],
-      ['📈', 'View Theory Results', 'theory-results.html'],
-      ['🧑‍🎓', 'Class Records', 'students.html'],
-      ['⚙️', 'Settings', 'settings.html'],
-      ['🚪', 'Logout', '#logout']
-    ],
-    'hod': [
-      ['🏠', 'Dashboard Home', '#'],
-      ['📁', 'Approve (CBT/Theory)', 'page-not-ready.html'],
-      ['🗃️', 'Results Overview', 'page-not-ready.html'],
-      ['📚', 'Teacher Performance', 'page-not-ready.html'],
-      ['📈', 'Department Reports', 'page-not-ready.html'],
-      ['🧑‍🎓', 'Students List', 'page-not-ready.html'],
-      ['⚙️', 'Settings', 'page-not-ready.html'],
-      ['🚪', 'Logout', '#logout']
-    ],
-    'hos': [
-      ['🏠', 'Dashboard Home', '#'],
-      ['✅', 'HOD Reports', 'page-not-ready.html'],
-      ['📄', 'Assessment Status', 'page-not-ready.html'],
-      ['📊', 'Departmental Performance', 'page-not-ready.html'],
-      ['📈', 'School Reports', 'page-not-ready.html'],
-      ['📂', 'Archive Results', 'page-not-ready.html'],
-      ['⚙️', 'Settings', 'page-not-ready.html'],
-      ['🚪', 'Logout', '#logout']
-    ],
-    'admin': [
-      ['🏠', 'Dashboard Home', '#'],
-      ['🧑‍🎓', 'Manage Students', 'page-not-ready.html'],
-      ['👨‍🏫', 'Manage Teachers', 'manage-teachers.html'],
-      ['🏫', 'Manage Classes & Subjects', 'page-not-ready.html'],
-      ['🔐', 'Create/Update Academic Year & Terms', 'page-not-ready.html'],
-      ['📁', 'System Settings', 'page-not-ready.html'],
-      ['📊', 'Assessment Data & Logs', 'page-not-ready.html'],
-      ['🗃️', 'Backup/Restore Data', 'page-not-ready.html'],
-      ['🚪', 'Logout', '#logout']
-    ],
-    'super-admin': [
-      ['🏠', 'Dashboard Home', '#'],
-      ['👥', 'Manage All Users', 'page-not-ready.html'],
-      ['🛠️', 'Portal Configurations', 'page-not-ready.html'],
-      ['🏷️', 'Access Roles & Permissions', 'page-not-ready.html'],
-      ['🔒', 'Security Logs', 'page-not-ready.html'],
-      ['📂', 'Backup/Restore Entire System', 'page-not-ready.html'],
-      ['🧮', 'Analytics (Usage, Performance)', 'page-not-ready.html'],
-      ['📬', 'Send Notifications', 'page-not-ready.html'],
-      ['🔍', 'Audit Logs', 'page-not-ready.html'],
-      ['🚪', 'Logout', '#logout']
-    ],
-    'accountant': [
-      ['🏠', 'Dashboard Home', '#'],
-      ['💰', 'Manage Fees', 'page-not-ready.html'],
-      ['📊', 'Generate Financial Reports', 'page-not-ready.html'],
-      ['🧾', 'View Transactions', 'page-not-ready.html'],
-      ['⚙️', 'Settings', 'page-not-ready.html'],
-      ['🚪', 'Logout', '#logout']
-    ]
-  };
+    const navItemsByRole = {
+      'student': [
+        ['🏠', 'Dashboard Home', '#'],
+        ['📝', 'Take CBT', 'take-cbt.html'],
+        ['📄', 'Take Theory Assessment', 'take-theory.html'],
+        ['📊', 'Progress Report', 'student-progress-report.html'],
+        ['👤', 'Profile', 'page-not-ready.html'],
+        ['🚪', 'Logout', '#logout']
+      ],
+      'teacher': [
+        ['🧾', 'Upload CBT', 'cbt-upload.html'],
+        ['📄', 'Upload Theory', 'upload-theory.html'],
+        ['📋', 'Mark Theory', 'mark-theory.html'],
+        ['📈', 'View CBT Results', 'view-results.html'],
+        ['📈', 'View Theory Results', 'theory-results.html'],
+        ['🧑‍🎓', 'Class Records', 'students.html'],
+        ['⚙️', 'Settings', 'settings.html'],
+        ['🚪', 'Logout', '#logout']
+      ],
+      'admin': [
+        ['🏠', 'Dashboard Home', '#'],
+        ['👨‍🏫', 'Manage Teachers', 'manage-teachers.html'],
+        ['🧑‍🎓', 'Manage Students', 'page-not-ready.html'],
+        ['🏫', 'Classes & Subjects', 'page-not-ready.html'],
+        ['🗃️', 'Backup/Restore', 'page-not-ready.html'],
+        ['🚪', 'Logout', '#logout']
+      ]
+    };
 
-  function renderSidebar(role) {
-    const navItems = navItemsByRole[role] || [];
-    document.getElementById('sidebar').innerHTML = navItems.map(
-      ([icon, label, link]) => {
-        const isLogout = link === '#logout';
-        return `
-          <a href="${isLogout ? '#' : link}" 
-             ${isLogout ? 'onclick="handleLogout(event)"' : ''}
-             style="
-              display: block;
-              margin: 10px 0;
-              padding: 12px 20px;
-              background: linear-gradient(145deg, #ffffff, #e6e6e6);
-              border-radius: 12px;
-              border: none;
-              box-shadow: 0 8px 15px rgba(0,0,0,0.1),
-                          inset 0 0 10px rgba(255,255,255,0.6),
-                          inset 0 0 5px rgba(255,255,255,0.4);
-              font-weight: bold;
-              color: #333;
-              text-decoration: none;
-              transition: transform 0.2s, box-shadow 0.3s;
-            " 
-            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 12px 20px rgba(0,0,0,0.2), 0 0 10px #00e5ff, inset 0 0 10px #fff'; this.style.color='#000';"
-            onmouseout="this.style.transform='none'; this.style.boxShadow='0 8px 15px rgba(0,0,0,0.1), inset 0 0 10px rgba(255,255,255,0.6), inset 0 0 5px rgba(255,255,255,0.4)'; this.style.color='#333';">
-              ${icon} ${label}
-          </a>`;
-      }
-    ).join('');
-  }
-
-  function handleLogout(event) {
-    event.preventDefault();
-    firebase.auth().signOut().then(() => {
-      window.location.href = 'login.html';
-    }).catch((error) => {
-      console.error("Logout error:", error);
-      alert("Failed to logout. Please try again.");
-    });
-  }
-
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      db.ref("users/" + user.uid).once("value").then(snapshot => {
-        const data = snapshot.val();
-        const role = data.role.toLowerCase();
-        const roleTitle = role.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-
-        document.getElementById("roleTitle").textContent = `${roleTitle} Dashboard`;
-        document.getElementById("greeting").textContent = `Welcome, ${data.name} (${roleTitle})`;
-
-        // ✅ Now rendering the sidebar correctly per role
-        renderSidebar(role);
-      });
-    } else {
-      window.location.href = "login.html";
+    function renderSidebar(role) {
+      const navItems = navItemsByRole[role] || [];
+      document.getElementById('sidebar').innerHTML = navItems.map(
+        ([icon, label, link]) => `
+          <a href="${link}" ${link === '#logout' ? 'onclick="handleLogout(event)"' : ''}>
+            ${icon} ${label}
+          </a>`
+      ).join('');
     }
-  });
 
-  function toggleSidebar() {
-    document.getElementById('sidebar').classList.toggle('active');
-  }
-</script>
+    function handleLogout(event) {
+      event.preventDefault();
+      firebase.auth().signOut().then(() => {
+        window.location.href = 'login.html';
+      });
+    }
 
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        db.ref("users/" + user.uid).once("value").then(snapshot => {
+          const data = snapshot.val();
+          const role = (data.role || 'student').toLowerCase();
+          document.getElementById("roleTitle").textContent = `${role.toUpperCase()} Dashboard`;
+          document.getElementById("greeting").textContent = `Welcome, ${data.name}`;
+          renderSidebar(role);
+        });
+      } else {
+        window.location.href = "login.html";
+      }
+    });
+  </script>
 </body>
 </html>
-
