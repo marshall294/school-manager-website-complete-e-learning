@@ -176,27 +176,29 @@
   font-size: 15px;
 }
 
-/* ✅ Make tile content flexible and centered */
+/* ✅ Center iframe perfectly inside each tile */
 .tile-content {
   flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: center;      /* Vertical centering */
+  justify-content: center;  /* Horizontal centering */
   padding: 10px;
-  height: 200px; /* Slightly taller for balance */
+  height: 200px;
+  background: #fafafa;
   box-sizing: border-box;
 }
 
-/* ✅ Reduce iframe size & centralize it */
+/* ✅ Make iframe smaller & centered visually */
 .tile-content iframe {
-  width: 90%;
-  height: 85%;
+  width: 85%;               /* reduce size */
+  height: 85%;              /* keep proportion */
   border: none;
   border-radius: 8px;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
-  background: #fff;
   display: block;
+  background: #fff;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
 }
+
 
 
 footer {
@@ -558,6 +560,7 @@ footer .bottom {
 
 </body>
 </html>
+
 
 
 
