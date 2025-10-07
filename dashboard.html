@@ -146,46 +146,58 @@
       margin-bottom: 5px;
     }
 
-    .tiles-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 50px;
-      margin-top: 5px;
-      padding-bottom: 5px;
-    }
+.tiles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 50px;
+  margin-top: 5px;
+  padding-bottom: 5px;
+}
 
-    .tile-frame {
-      background: var(--tile-bg);
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-      overflow: hidden;
-      transition: transform 0.2s ease;
-      display: flex;
-      flex-direction: column;
-    }
+.tile-frame {
+  background: var(--tile-bg);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  transition: transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
 
-    .tile-frame:hover {
-      transform: translateY(-3px);
-    }
+.tile-frame:hover {
+  transform: translateY(-3px);
+}
 
-    .tile-header {
-      background: var(--sidebar-bg);
-      color: white;
-      padding: 10px 14px;
-      font-weight: 600;
-      font-size: 15px;
-    }
+.tile-header {
+  background: var(--sidebar-bg);
+  color: white;
+  padding: 10px 14px;
+  font-weight: 600;
+  font-size: 15px;
+}
 
-    .tile-content {
-      flex: 1;
-      height: 180px;
-    }
+/* ✅ Make tile content flexible and centered */
+.tile-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  height: 200px; /* Slightly taller for balance */
+  box-sizing: border-box;
+}
 
-    .tile-content iframe {
-      width: 80%;
-      height: 80%;
-      border: none;
-    }
+/* ✅ Reduce iframe size & centralize it */
+.tile-content iframe {
+  width: 90%;
+  height: 85%;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
+  background: #fff;
+  display: block;
+}
+
 
 footer {
   background: var(--sidebar-bg);
@@ -546,6 +558,7 @@ footer .bottom {
 
 </body>
 </html>
+
 
 
 
