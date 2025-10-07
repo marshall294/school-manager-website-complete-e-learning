@@ -187,51 +187,73 @@
       border: none;
     }
 
-    footer {
-      background: var(--sidebar-bg);
-      color: white;
-      padding: 25px 10px;
-      font-size: 14px;
-      margin-top: 30px;
-    }
+footer {
+  background: var(--sidebar-bg);
+  color: white;
+  padding: 25px 10px;
+  font-size: 14px;
+  margin-top: 30px;
 
-    footer .footer-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 20px;
-      text-align: left;
-      max-width: 1100px;
-      margin: auto;
-    }
+  /* 👇 Push footer content away from left sidebar */
+  margin-left: 260px;
+  transition: margin-left 0.3s ease;
+}
 
-    footer h4 { font-size: 16px; margin-bottom: 10px; color: #00e5ff; }
+footer .footer-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  text-align: left;
+  max-width: 1100px;
+  margin: auto;
+  padding: 0 20px;
+}
 
-    footer a {
-      color: #eee;
-      text-decoration: none;
-      display: block;
-      margin: 4px 0;
-      transition: color 0.3s;
-    }
+footer h4 {
+  font-size: 16px;
+  margin-bottom: 10px;
+  color: #00e5ff;
+}
 
-    footer a:hover { color: #00e5ff; }
+footer a {
+  color: #eee;
+  text-decoration: none;
+  display: block;
+  margin: 4px 0;
+  transition: color 0.3s;
+}
 
-    .social-icons a {
-      display: inline-block;
-      margin: 0 8px;
-      color: white;
-      font-size: 18px;
-      transition: transform 0.3s;
-    }
+footer a:hover {
+  color: #00e5ff;
+}
 
-    .social-icons a:hover { transform: scale(1.2); color: #00e5ff; }
+.social-icons a {
+  display: inline-block;
+  margin: 0 8px;
+  color: white;
+  font-size: 18px;
+  transition: transform 0.3s;
+}
 
-    footer .bottom {
-      text-align: center;
-      margin-top: 20px;
-      font-size: 13px;
-      color: #ccc;
-    }
+.social-icons a:hover {
+  transform: scale(1.2);
+  color: #00e5ff;
+}
+
+footer .bottom {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 13px;
+  color: #ccc;
+}
+
+/* ✅ Responsive fix for small screens — remove left margin when sidebar hides */
+@media (max-width: 900px) {
+  footer {
+    margin-left: 0;
+  }
+}
+
 
 
     @media (max-width: 768px) {
@@ -524,6 +546,7 @@
 
 </body>
 </html>
+
 
 
 
