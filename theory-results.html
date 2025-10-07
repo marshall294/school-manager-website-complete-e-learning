@@ -65,6 +65,11 @@
     </table>
   </section>
 
+  <!-- Summary Section -->
+  <section id="summaryContainer" class="mt-8 hidden bg-white p-5 rounded-lg shadow">
+    <h3 class="font-semibold text-lg text-gray-800 mb-4 border-b pb-2">Summary</h3>
+  </section>
+
   <script>
     // Firebase Setup
     const firebaseConfig = {
@@ -92,6 +97,7 @@
     const filterTerm = document.getElementById("filterTerm");
     const generateBtn = document.getElementById("generateBtn");
     const tableContainer = document.getElementById("tableContainer");
+    const summaryContainer = document.getElementById("summaryContainer");
     const thead = document.getElementById("thead");
     const tbody = document.getElementById("tbody");
     const teacherClassDisplay = document.getElementById("teacherClassDisplay");
@@ -132,6 +138,8 @@
 
     async function generateBroadsheet(year, term) {
       tableContainer.classList.add("hidden");
+      summaryContainer.classList.add("hidden");
+
       const snap = await db.ref("theorySubmissions").once("value");
       const data = snap.val() || {};
 
@@ -175,6 +183,8 @@
       });
 
       tbody.innerHTML = "";
+      const subjectStats = {};
+
       for (const student in grouped) {
         let row = `<tr class="even:bg-gray-50 hover:bg-gray-100 transition"><td class="p-3 border font-semibold">${student}</td>`;
         let total = 0, subjectCount = 0;
@@ -187,6 +197,10 @@
             row += `<td class="p-2 border text-center">${score}</td>`;
             subjectTotal += score;
           });
+
+          if (!subjectStats[subject]) subjectStats[subject] = [];
+          if (subjectTotal > 0) subjectStats[subject].push(subjectTotal);
+
           if (subjectTotal > 0) {
             total += subjectTotal;
             subjectCount++;
@@ -202,7 +216,30 @@
         tbody.insertAdjacentHTML("beforeend", row);
       }
 
+      // Build summary
+      let summaryHTML = `<h3 class="font-semibold text-lg mb-3 text-gray-700">Class Summary (${teacherClass}, ${term}, ${year})</h3>`;
+      summaryHTML += `<div class="overflow-x-auto"><table class="min-w-full text-sm border border-gray-300 rounded-lg">
+        <thead class="bg-blue-50 text-gray-700 uppercase text-xs tracking-wide">
+          <tr><th class="border p-2 text-left">Subject</th><th class="border p-2 text-center">Highest</th><th class="border p-2 text-center">Lowest</th><th class="border p-2 text-center">Average</th></tr>
+        </thead><tbody>`;
+
+      for (const [subject, scores] of Object.entries(subjectStats)) {
+        const high = Math.max(...scores);
+        const low = Math.min(...scores);
+        const avg = (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(2);
+        summaryHTML += `<tr class="even:bg-gray-50 hover:bg-gray-100 transition">
+          <td class="border p-2">${subject}</td>
+          <td class="border p-2 text-center">${high}</td>
+          <td class="border p-2 text-center">${low}</td>
+          <td class="border p-2 text-center">${avg}</td>
+        </tr>`;
+      }
+
+      summaryHTML += `</tbody></table></div>`;
+      summaryContainer.innerHTML = summaryHTML;
+
       tableContainer.classList.remove("hidden");
+      summaryContainer.classList.remove("hidden");
     }
   </script>
 </body>
