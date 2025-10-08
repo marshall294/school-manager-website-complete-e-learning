@@ -21,7 +21,7 @@
       font-size: 1.8rem;
     }
     .container {
-      max-width: 700px;
+      max-width: 750px;
       margin: 30px auto;
       background: white;
       border-radius: 10px;
@@ -43,10 +43,40 @@
     .message { margin-top: 15px; font-weight: bold; color: green; }
     .error { color: red; font-weight: bold; }
     .list { margin-top: 30px; border-top: 2px solid #004d99; padding-top: 10px; }
+    .term-section {
+      background: #e8f3ff;
+      border-radius: 8px;
+      margin-top: 20px;
+      padding: 15px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.05);
+    }
+    .term-section h4 {
+      background: #004d99;
+      color: white;
+      padding: 10px;
+      border-radius: 6px;
+      margin: 0 0 10px 0;
+      font-size: 1.1rem;
+    }
     .term-item {
-      background: #f5faff; padding: 10px; border-radius: 8px;
-      margin-bottom: 10px; line-height: 1.6;
+      background: #f9fcff;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      line-height: 1.6;
       border-left: 5px solid #004d99;
+    }
+    .term-item button {
+      margin-right: 8px;
+      background: #004d99;
+      font-size: 14px;
+      padding: 6px 12px;
+    }
+    .term-item .delete-btn {
+      background: #d32f2f;
+    }
+    .term-item .delete-btn:hover {
+      background: #b71c1c;
     }
   </style>
 </head>
@@ -91,7 +121,7 @@
   <label>End Date</label>
   <input type="date" id="endDate">
 
-  <button onclick="saveTerm()">💾 Save Term Info</button>
+  <button id="saveBtn" onclick="saveTerm()">💾 Save Term Info</button>
   <p id="msg" class="message"></p>
 
   <div class="list">
@@ -121,6 +151,10 @@
   const endDate = document.getElementById("endDate");
   const msg = document.getElementById("msg");
   const termList = document.getElementById("termList");
+  const saveBtn = document.getElementById("saveBtn");
+
+  let editMode = false;
+  let editPath = "";
 
   function daysBetween(start, end) {
     const s = new Date(start);
@@ -141,16 +175,26 @@
       return;
     }
 
-    db.ref(`term_dates/${y}/${t}/${c}`).set({ start: s, end: e })
-      .then(() => {
-        msg.textContent = "✅ Term information saved successfully!";
-        msg.className = "message";
-        loadTerms();
-      })
-      .catch(err => {
-        msg.textContent = "❌ Error: " + err.message;
-        msg.className = "error";
-      });
+    const termData = { start: s, end: e };
+    const path = `term_dates/${y}/${t}/${c}`;
+
+    if (editMode && editPath) {
+      db.ref(editPath).update(termData)
+        .then(() => {
+          msg.textContent = "✅ Term updated successfully!";
+          msg.className = "message";
+          resetForm();
+          loadTerms();
+        });
+    } else {
+      db.ref(path).set(termData)
+        .then(() => {
+          msg.textContent = "✅ Term information saved successfully!";
+          msg.className = "message";
+          resetForm();
+          loadTerms();
+        });
+    }
   }
 
   function loadTerms() {
@@ -164,26 +208,79 @@
 
       snapshot.forEach(yearSnap => {
         const year = yearSnap.key;
+        const yearSection = document.createElement("div");
+        yearSection.className = "term-section";
+        const yearTitle = document.createElement("h4");
+        yearTitle.textContent = `📆 Academic Year: ${year}`;
+        yearSection.appendChild(yearTitle);
+
         const yearData = yearSnap.val();
         for (const term in yearData) {
+          const termTitle = document.createElement("h4");
+          termTitle.style.background = "#0077cc";
+          termTitle.textContent = `🗓️ ${term}`;
+          yearSection.appendChild(termTitle);
+
           for (const cls in yearData[term]) {
             const info = yearData[term][cls];
             const days = daysBetween(info.start, info.end);
             const div = document.createElement("div");
             div.className = "term-item";
             div.innerHTML = `
-              <span>🏫 <b>Class:</b> ${cls}</span>
-              <span>📘 <b>Term:</b> ${term}</span>
-              <span>📅 <b>Start:</b> ${info.start}</span>
-              <span>📅 <b>End:</b> ${info.end}</span>
-              <span>📈 <b>School Days:</b> ${days}</span>
-              <span>📆 <b>Year:</b> ${year}</span>
+              <p>🏫 <b>Class:</b> ${cls}</p>
+              <p>📅 <b>Start:</b> ${info.start}</p>
+              <p>📅 <b>End:</b> ${info.end}</p>
+              <p>📈 <b>School Days:</b> ${days}</p>
+              <button onclick="editTerm('${year}','${term}','${cls}','${info.start}','${info.end}')">✏️ Edit</button>
+              <button class="delete-btn" onclick="deleteTerm('${year}','${term}','${cls}')">🗑️ Delete</button>
             `;
-            termList.appendChild(div);
+            yearSection.appendChild(div);
           }
         }
+
+        termList.appendChild(yearSection);
       });
     });
+  }
+
+  function editTerm(year, term, cls, start, end) {
+    yearSelect.value = year;
+    termSelect.value = term;
+    classSelect.value = cls;
+    startDate.value = start;
+    endDate.value = end;
+
+    editMode = true;
+    editPath = `term_dates/${year}/${term}/${cls}`;
+    saveBtn.textContent = "✏️ Update Term Info";
+    msg.textContent = "Editing mode — make changes and click Update.";
+    msg.className = "message";
+  }
+
+  function deleteTerm(year, term, cls) {
+    if (confirm(`Are you sure you want to delete ${term} - ${cls} (${year})?`)) {
+      db.ref(`term_dates/${year}/${term}/${cls}`).remove()
+        .then(() => {
+          msg.textContent = "🗑️ Term deleted successfully.";
+          msg.className = "message";
+          loadTerms();
+        })
+        .catch(err => {
+          msg.textContent = "❌ Error: " + err.message;
+          msg.className = "error";
+        });
+    }
+  }
+
+  function resetForm() {
+    classSelect.value = "";
+    yearSelect.value = "";
+    termSelect.value = "";
+    startDate.value = "";
+    endDate.value = "";
+    saveBtn.textContent = "💾 Save Term Info";
+    editMode = false;
+    editPath = "";
   }
 
   loadTerms();
