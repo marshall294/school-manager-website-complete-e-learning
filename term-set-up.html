@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Term Setup | ORLI Academy</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      margin: 0;
+    }
+    header {
+      background: #004d99;
+      color: white;
+      text-align: center;
+      padding: 20px;
+      font-size: 1.8rem;
+    }
+    .container {
+      max-width: 700px;
+      margin: 30px auto;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      padding: 30px;
+    }
+    label { display: block; margin-top: 15px; font-weight: bold; }
+    select, input[type="date"] {
+      width: 100%; padding: 10px; border-radius: 5px;
+      border: 1px solid #ccc; margin-top: 5px;
+    }
+    button {
+      margin-top: 20px; padding: 12px 18px;
+      background: #00796b; color: white;
+      border: none; border-radius: 5px; cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover { background: #004d40; }
+    .message { margin-top: 15px; font-weight: bold; color: green; }
+    .error { color: red; font-weight: bold; }
+    .list { margin-top: 30px; border-top: 2px solid #004d99; padding-top: 10px; }
+    .term-item {
+      background: #f5faff; padding: 10px; border-radius: 8px;
+      margin-bottom: 10px; line-height: 1.6;
+      border-left: 5px solid #004d99;
+    }
+  </style>
+</head>
+<body>
+
+<header>🗓️ Term Setup — ORLI Academy</header>
+
+<div class="container">
+  <label>Class</label>
+  <select id="class">
+    <option value="">-- Select --</option>
+    <option>Year 1</option>
+    <option>Year 2</option>
+    <option>Year 3</option>
+    <option>Year 4</option>
+    <option>Year 5</option>
+    <option>Year 6</option>
+  </select>
+
+  <label>Academic Year</label>
+  <select id="year">
+    <option value="">-- Select --</option>
+    <option>2024–2025</option>
+    <option>2025–2026</option>
+    <option>2026–2027</option>
+    <option>2027–2028</option>
+    <option>2028–2029</option>
+    <option>2029–2030</option>
+  </select>
+
+  <label>Term</label>
+  <select id="term">
+    <option value="">-- Select --</option>
+    <option>First Term</option>
+    <option>Second Term</option>
+    <option>Third Term</option>
+  </select>
+
+  <label>Start Date</label>
+  <input type="date" id="startDate">
+
+  <label>End Date</label>
+  <input type="date" id="endDate">
+
+  <button onclick="saveTerm()">💾 Save Term Info</button>
+  <p id="msg" class="message"></p>
+
+  <div class="list">
+    <h3>📘 Saved Term Information</h3>
+    <div id="termList"></div>
+  </div>
+</div>
+
+<script>
+  // Initialize Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyC3Ef_ZnjmU_X2JJDbUlDYv6enGkuuW2n0",
+    authDomain: "school-6425b.firebaseapp.com",
+    databaseURL: "https://school-6425b-default-rtdb.firebaseio.com",
+    projectId: "school-6425b",
+    storageBucket: "school-6425b.firebasestorage.app",
+    messagingSenderId: "929265479935",
+    appId: "1:929265479935:web:af45ea5968ee50258a1cca"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  const classSelect = document.getElementById("class");
+  const yearSelect = document.getElementById("year");
+  const termSelect = document.getElementById("term");
+  const startDate = document.getElementById("startDate");
+  const endDate = document.getElementById("endDate");
+  const msg = document.getElementById("msg");
+  const termList = document.getElementById("termList");
+
+  function daysBetween(start, end) {
+    const s = new Date(start);
+    const e = new Date(end);
+    return Math.ceil((e - s) / (1000 * 60 * 60 * 24)) + 1;
+  }
+
+  function saveTerm() {
+    const c = classSelect.value.trim();
+    const y = yearSelect.value.trim();
+    const t = termSelect.value.trim();
+    const s = startDate.value;
+    const e = endDate.value;
+
+    if (!c || !y || !t || !s || !e) {
+      msg.textContent = "⚠ Please fill all fields.";
+      msg.className = "error";
+      return;
+    }
+
+    db.ref(`term_dates/${y}/${t}/${c}`).set({ start: s, end: e })
+      .then(() => {
+        msg.textContent = "✅ Term information saved successfully!";
+        msg.className = "message";
+        loadTerms();
+      })
+      .catch(err => {
+        msg.textContent = "❌ Error: " + err.message;
+        msg.className = "error";
+      });
+  }
+
+  function loadTerms() {
+    termList.innerHTML = "<p>Loading...</p>";
+    db.ref("term_dates").once("value").then(snapshot => {
+      termList.innerHTML = "";
+      if (!snapshot.exists()) {
+        termList.innerHTML = "<p>No term data found.</p>";
+        return;
+      }
+
+      snapshot.forEach(yearSnap => {
+        const year = yearSnap.key;
+        const yearData = yearSnap.val();
+        for (const term in yearData) {
+          for (const cls in yearData[term]) {
+            const info = yearData[term][cls];
+            const days = daysBetween(info.start, info.end);
+            const div = document.createElement("div");
+            div.className = "term-item";
+            div.innerHTML = `
+              <span>🏫 <b>Class:</b> ${cls}</span>
+              <span>📘 <b>Term:</b> ${term}</span>
+              <span>📅 <b>Start:</b> ${info.start}</span>
+              <span>📅 <b>End:</b> ${info.end}</span>
+              <span>📈 <b>School Days:</b> ${days}</span>
+              <span>📆 <b>Year:</b> ${year}</span>
+            `;
+            termList.appendChild(div);
+          }
+        }
+      });
+    });
+  }
+
+  loadTerms();
+</script>
+
+</body>
+</html>
